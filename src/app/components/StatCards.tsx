@@ -7,10 +7,10 @@ interface StatCardsProps {
   filteredPositions?: Position[];
   isFiltered?: boolean;
   onClearFilter?: () => void;
-  onDrillDown?: (positions: Position[], title: string) => void;
+  onFilter?: (partial: Record<string, string>) => void;
 }
 
-export function StatCards({ wireframe = false, filteredPositions, isFiltered = false, onClearFilter, onDrillDown }: StatCardsProps) {
+export function StatCards({ wireframe = false, filteredPositions, isFiltered = false, onClearFilter, onFilter }: StatCardsProps) {
   const [displayCurrency, setDisplayCurrency] = useState<Currency>('CNY');
   const [pnlCurrency, setPnlCurrency] = useState<Currency>('CNY');
 
@@ -193,10 +193,7 @@ export function StatCards({ wireframe = false, filteredPositions, isFiltered = f
         {/* 临近到期 */}
         <div
           className="bg-white rounded-xl border border-[#E8ECF0] p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-          onClick={() => onDrillDown?.(positions.filter((p) => {
-            const days = getDaysUntilExpiry(p.expiryDate);
-            return days >= 0 && days <= 7 && p.status !== 'closed' && p.status !== 'expired';
-          }), '临近到期（≤7天）')}
+          onClick={() => onFilter?.({ expiryDateTo: '2026-05-21' })}
         >
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between mb-3">
@@ -221,7 +218,7 @@ export function StatCards({ wireframe = false, filteredPositions, isFiltered = f
         {/* 可行权且盈利 */}
         <div
           className="bg-white rounded-xl border border-[#E8ECF0] p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-          onClick={() => onDrillDown?.(positions.filter((p) => p.status === 'profitable-exercisable'), '可行权且盈利')}
+          onClick={() => onFilter?.({ status: 'profitable-exercisable' })}
         >
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between mb-3">

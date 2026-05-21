@@ -575,9 +575,9 @@ export function BatchImportPage() {
           onChange={e => commitEdit(e.target.value)}
           onBlur={() => commitEdit()}
           onKeyDown={e => { if (e.key === 'Escape') cancelEdit(); }}
-          className="text-[11px] border border-[#1677FF] rounded px-1 py-1 focus:outline-none bg-white"
+          onClick={e => { e.stopPropagation(); e.preventDefault(); (e.target as HTMLInputElement).showPicker?.(); }}
+          className="text-[11px] border border-[#1677FF] rounded px-1 py-1 focus:outline-none bg-white cursor-pointer"
           autoFocus
-          onClick={e => e.stopPropagation()}
         />
       );
     }

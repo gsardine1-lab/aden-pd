@@ -213,7 +213,8 @@ function EditableField({ label, value, onChange, type = 'text', options, suffix,
             </select>
           ) : type === 'date' ? (
             <input type="date" value={draft} onChange={e => { setDraft(e.target.value); if (isEmpty) onChange(e.target.value); }}
-              className={`flex-1 text-[12px] border rounded px-2 py-1.5 focus:outline-none ${flash && isEmpty ? 'border-[#E53935] bg-[#FFF5F5]' : 'border-[#D1D5DB]'}`}
+              onClick={e => { e.preventDefault(); (e.target as HTMLInputElement).showPicker?.(); }}
+              className={`flex-1 text-[12px] border rounded px-2 py-1.5 focus:outline-none cursor-pointer ${flash && isEmpty ? 'border-[#E53935] bg-[#FFF5F5]' : 'border-[#D1D5DB]'}`}
               style={flash && isEmpty ? { boxShadow: '0 0 0 2px rgba(229,57,53,0.25)' } : undefined} autoFocus={editing} />
           ) : (
             <input type="text" value={draft} onChange={e => setDraft(e.target.value)} placeholder={placeholder || ''}

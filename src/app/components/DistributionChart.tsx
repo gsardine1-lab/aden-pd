@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Sector } from 'recharts';
-import { Minus, Plus, Search } from 'lucide-react';
-import { mockPositions, convertCurrency, formatAmount, Position } from './mockData';
+import { mockPositions, formatAmount } from './mockData';
+import type { Position } from './mockData';
 
 interface DistributionChartProps {
   wireframe?: boolean;
-  onDrillDown?: (positions: Position[], title: string) => void;
+  onFilter?: (min: number, max: number) => void;
   positions?: Position[];
 }
 
@@ -26,40 +26,12 @@ const PCT_BUCKETS = [
   { label: '<-30%',  min: -Infinity, max: -0.30, color: '#2E7D32' },
 ];
 
-const FIXED_POINTS = [0.1, 0.05, 0, -0.05, -0.1] as const;
-
-function calcPnl(position: typeof mockPositions[0], priceChangePct: number): number {
-  const newPrice = position.currentPrice * (1 + priceChangePct);
-  if (newPrice <= position.strikePrice) {
-    return -position.optionPremiumCNY;
-  }
-  const gain = (newPrice - position.strikePrice) * (position.notionalCNY / position.strikePrice);
-  return gain - position.optionPremiumCNY;
-}
-
-export function DistributionChart({ wireframe = false, onDrillDown, positions }: DistributionChartProps) {
+export function DistributionChart({ wireframe = false, onFilter, positions }: DistributionChartProps) {
   const dataSource = positions ?? mockPositions;
   const candidates = dataSource.filter(p => p.status !== 'closed' && p.status !== 'expired');
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const chartWrapperRef = useRef<HTMLDivElement>(null);
-
-  // Simulator state
-  const [selectedId, setSelectedId] = useState(candidates[0]?.id ?? '');
-  const [sliderValue, setSliderValue] = useState(0);
-  const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
 
   const bucketCounts = PCT_BUCKETS.map((bucket) => {
     const positions = dataSource.filter((p) => {
@@ -117,23 +89,6 @@ export function DistributionChart({ wireframe = false, onDrillDown, positions }:
       </g>
     );
   };
-
-  // Simulator data
-  const selected = dataSource.find((p) => p.id === selectedId) ?? candidates[0];
-  const sliderPnl = selected ? calcPnl(selected, sliderValue / 100) : 0;
-  const cur = selected?.currency ?? 'CNY';
-
-  const adjustByOne = (delta: number) => {
-    setSliderValue((prev) => Math.max(-100, Math.min(100, prev + delta)));
-  };
-
-  const filtered = candidates.filter((p) => {
-    if (!search) return true;
-    return (
-      p.underlying.includes(search) ||
-      p.code.toLowerCase().includes(search.toLowerCase())
-    );
-  });
 
   if (wireframe) {
     return (
@@ -194,197 +149,84 @@ export function DistributionChart({ wireframe = false, onDrillDown, positions }:
   const maxPct = Math.max(...[...profitItems, ...lossItems].map(b => b.pct), 1);
 
   return (
-    <div className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm flex flex-col">
-      {/* 持仓收益率分布 */}
-      <div className="text-[11px] font-semibold text-[#0D1117] px-2.5 pt-2 pb-1.5 border-b border-[#F3F4F6]">
+    <div className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm flex flex-col h-full">
+      {/* 标题 */}
+      <div className="text-[11px] font-semibold text-[#0D1117] px-3 pt-2.5 pb-2">
         持仓收益率分布
         <span className="text-[#9CA3AF] font-normal ml-1.5 text-[9px]">共 {totalCount} 个持仓</span>
       </div>
-      <div className="flex gap-1.5 px-2.5 py-1.5">
-        <div className="flex-shrink-0 flex flex-col items-center" ref={chartWrapperRef} onMouseMove={handleChartMouseMove}>
-          <PieChart width={110} height={110}>
-            <Pie
-              data={chartData}
-              cx={55} cy={55}
-              innerRadius={35}
-              outerRadius={48}
-              paddingAngle={2}
-              dataKey="value"
-              activeIndex={activeIndex !== null ? activeIndex : undefined}
-              activeShape={renderActiveShape}
-              onMouseEnter={onPieEnter}
-              onMouseLeave={onPieLeave}
-              onClick={(data) => onDrillDown?.(data.positions, data.name)}
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} cursor="pointer" />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} position={tooltipPos ?? undefined}
-              cursor={false} allowEscapeViewBox={{ x: true, y: true }} />
-          </PieChart>
-        </div>
-        <div className="flex-1 flex gap-2 min-w-0">
-          <div className="flex-1 min-w-0">
-            <div className="text-[8px] font-semibold text-[#E53935] uppercase tracking-wider mb-1">浮盈</div>
-            <div className="space-y-0.5">
-              {profitItems.slice(0, 5).map((b) => (
-                <div key={b.label} className="flex items-center gap-1.5 cursor-pointer hover:bg-[#F9FAFB] rounded px-1 -mx-1 py-0.5"
-                  onClick={() => onDrillDown?.(b.positions, b.label)}>
-                  <div className="w-1.5 h-1.5 rounded-sm flex-shrink-0" style={{ backgroundColor: b.color }} />
-                  <span className="text-[10px] text-[#374151] whitespace-nowrap">{b.label}</span>
-                  <div className="flex-1 h-1 rounded-full bg-[#F3F4F6] overflow-hidden ml-auto max-w-[40px]">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${(b.pct / maxPct) * 100}%`, backgroundColor: b.color }} />
-                  </div>
-                  <span className="text-[9px] text-[#6B7280] w-6 text-right tabular-nums">{b.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="w-px bg-[#F3F4F6] self-stretch" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[8px] font-semibold text-[#059669] uppercase tracking-wider mb-1">浮亏</div>
-            <div className="space-y-0.5">
-              {lossItems.slice(-5).map((b) => (
-                <div key={b.label} className="flex items-center gap-1.5 cursor-pointer hover:bg-[#F9FAFB] rounded px-1 -mx-1 py-0.5"
-                  onClick={() => onDrillDown?.(b.positions, b.label)}>
-                  <div className="w-1.5 h-1.5 rounded-sm flex-shrink-0" style={{ backgroundColor: b.color }} />
-                  <span className="text-[10px] text-[#374151] whitespace-nowrap">{b.label}</span>
-                  <div className="flex-1 h-1 rounded-full bg-[#F3F4F6] overflow-hidden ml-auto max-w-[40px]">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${(b.pct / maxPct) * 100}%`, backgroundColor: b.color }} />
-                  </div>
-                  <span className="text-[9px] text-[#6B7280] w-6 text-right tabular-nums">{b.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+
+      {/* 饼图 — 居中 */}
+      <div className="flex justify-center px-3 pb-1" ref={chartWrapperRef} onMouseMove={handleChartMouseMove}>
+        <PieChart width={90} height={90}>
+          <Pie
+            data={chartData}
+            cx={45} cy={45}
+            innerRadius={26}
+            outerRadius={38}
+            paddingAngle={2}
+            dataKey="value"
+            activeIndex={activeIndex !== null ? activeIndex : undefined}
+            activeShape={renderActiveShape}
+            onMouseEnter={onPieEnter}
+            onMouseLeave={onPieLeave}
+            onClick={(data) => { const b = bucketCounts.find(b => b.label === data.name); if (b) onFilter?.(b.min, b.max); }}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} cursor="pointer" />
+            ))}
+          </Pie>
+          <Tooltip content={<CustomTooltip />} position={tooltipPos ?? undefined}
+            cursor={false} allowEscapeViewBox={{ x: true, y: true }} />
+        </PieChart>
       </div>
 
-      {/* 分隔线 */}
-      <div className="border-t border-[#F3F4F6]" />
-
-      {/* 持仓盈亏情景模拟 */}
-      <div className="px-3 pt-2.5 pb-3">
-        <div className="flex items-center justify-between mb-2.5">
-          <span className="text-[11px] font-semibold text-[#0D1117]">持仓盈亏情景模拟</span>
-          <div className="relative flex-1 max-w-[360px]" ref={containerRef}>
-            <div
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-[#E5E7EB] cursor-pointer hover:border-[#1677FF] transition-colors min-w-0 w-full"
-              onClick={() => setOpen(true)}
-            >
-              <Search size={10} className="text-[#9CA3AF] flex-shrink-0" />
-              <span className="text-[9px] text-[#374151] truncate">
-                {selected?.underlying} ({cur})
-              </span>
-            </div>
-            {open && (
-              <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-white border border-[#E8ECF0] rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                <div className="p-1.5 border-b border-[#F3F4F6]">
-                  <input
-                    type="text"
-                    placeholder="搜索"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full px-2 py-1 text-[10px] border border-[#E5E7EB] rounded focus:outline-none focus:border-[#1677FF]"
-                  />
+      {/* 图例 — 单列，浮盈在上浮亏在下 */}
+      <div className="px-3 pb-2.5 space-y-1.5">
+        {profitItems.length > 0 && (
+          <div>
+            <div className="text-[8px] font-semibold text-[#E53935] uppercase tracking-wider mb-0.5">浮盈</div>
+            <div className="space-y-0.5">
+              {profitItems.slice(0, 4).map((b) => (
+                <div key={b.label} className="flex items-center gap-1.5 cursor-pointer hover:bg-[#F9FAFB] rounded px-1 -mx-1 py-0.5"
+                  onClick={() => onFilter?.(b.min, b.max)}>
+                  <div className="w-1.5 h-1.5 rounded-sm flex-shrink-0" style={{ backgroundColor: b.color }} />
+                  <span className="text-[10px] text-[#374151] whitespace-nowrap">{b.label}</span>
+                  <div className="flex-1 h-1 rounded-full bg-[#F3F4F6] overflow-hidden min-w-[20px]">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${(b.pct / maxPct) * 100}%`, backgroundColor: b.color }} />
+                  </div>
+                  <span className="text-[9px] text-[#6B7280] w-5 text-right tabular-nums">{b.count}</span>
                 </div>
-                {filtered.length === 0 ? (
-                  <div className="px-3 py-4 text-[10px] text-[#9CA3AF] text-center">无匹配结果</div>
-                ) : (
-                  filtered.map((p) => (
-                    <div
-                      key={p.id}
-                      className={`flex items-center px-2.5 py-1.5 cursor-pointer text-[10px] hover:bg-[#F9FAFB] ${
-                        p.id === selectedId ? 'bg-[#EFF6FF]' : ''
-                      }`}
-                      onClick={() => { setSelectedId(p.id); setOpen(false); setSearch(''); }}
-                    >
-                      <span className="text-[#9CA3AF] w-8 flex-shrink-0 font-medium">{p.currency}</span>
-                      <span className="text-[#374151] truncate">{p.underlying}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
+              ))}
+              {profitItems.length > 4 && (
+                <div className="text-[9px] text-[#9CA3AF] pl-3">+{profitItems.length - 4} 档</div>
+              )}
+            </div>
           </div>
-        </div>
-
-        {/* 滑块 */}
-        <div className="flex items-center gap-2 mb-2">
-          <button
-            onClick={() => adjustByOne(-1)}
-            disabled={sliderValue <= -100}
-            className="w-6 h-6 flex items-center justify-center rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] hover:bg-[#F3F4F6] text-[#374151] disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
-          >
-            <Minus size={12} />
-          </button>
-          <div className="flex-1 relative">
-            <input
-              type="range"
-              min={-100}
-              max={100}
-              step={1}
-              value={sliderValue}
-              onChange={(e) => setSliderValue(Number(e.target.value))}
-              className="w-full h-1.5 appearance-none rounded-full cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, #059669 0%, #E5E7EB 50%, #E53935 100%)`,
-              }}
-            />
+        )}
+        {lossItems.length > 0 && (
+          <div>
+            <div className="text-[8px] font-semibold text-[#059669] uppercase tracking-wider mb-0.5">浮亏</div>
+            <div className="space-y-0.5">
+              {lossItems.slice(-4).map((b) => (
+                <div key={b.label} className="flex items-center gap-1.5 cursor-pointer hover:bg-[#F9FAFB] rounded px-1 -mx-1 py-0.5"
+                  onClick={() => onFilter?.(b.min, b.max)}>
+                  <div className="w-1.5 h-1.5 rounded-sm flex-shrink-0" style={{ backgroundColor: b.color }} />
+                  <span className="text-[10px] text-[#374151] whitespace-nowrap">{b.label}</span>
+                  <div className="flex-1 h-1 rounded-full bg-[#F3F4F6] overflow-hidden min-w-[20px]">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${(b.pct / maxPct) * 100}%`, backgroundColor: b.color }} />
+                  </div>
+                  <span className="text-[9px] text-[#6B7280] w-5 text-right tabular-nums">{b.count}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <button
-            onClick={() => adjustByOne(1)}
-            disabled={sliderValue >= 100}
-            className="w-6 h-6 flex items-center justify-center rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] hover:bg-[#F3F4F6] text-[#374151] disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
-          >
-            <Plus size={12} />
-          </button>
-        </div>
+        )}
+      </div>
 
-        <div className="flex justify-between text-[9px] text-[#9CA3AF] mb-2">
-          <span>-100%</span>
-          <span>0%</span>
-          <span>+100%</span>
-        </div>
-
-        {/* 模拟结果 */}
-        <div className="flex items-center justify-between mb-2.5 px-3 py-1.5 rounded-md bg-[#F9FAFB]">
-          <span className="text-[10px] text-[#6B7280]">
-            模拟价格：<span className="font-semibold text-[#0D1117]">{(selected.currentPrice * (1 + sliderValue / 100)).toFixed(2)} {cur}</span>
-          </span>
-          <span className={`text-[11px] font-bold ${sliderValue > 0 ? 'text-[#E53935]' : sliderValue < 0 ? 'text-[#059669]' : 'text-[#6B7280]'}`}>
-            {sliderValue > 0 ? '+' : ''}{sliderValue}%
-          </span>
-          <span className={`text-[10px] font-semibold ${sliderPnl >= 0 ? 'text-[#E53935]' : 'text-[#059669]'}`}>
-            盈亏：{formatAmount(convertCurrency(sliderPnl, cur), cur)} {cur}
-          </span>
-        </div>
-
-        {/* 固定场景 */}
-        <div className="flex gap-1.5">
-          {FIXED_POINTS.map((pct) => {
-            const pnl = calcPnl(selected, pct);
-            const converted = convertCurrency(pnl, cur);
-            return (
-              <div
-                key={pct}
-                className={`flex-1 flex flex-col items-center rounded-md px-1.5 py-1.5 ${
-                  pct === 0 ? 'bg-[#EFF6FF]' : 'bg-[#F9FAFB]'
-                }`}
-              >
-                <span className={`text-[9px] font-medium ${
-                  pct === 0 ? 'text-[#1677FF]' : pct > 0 ? 'text-[#E53935]' : 'text-[#059669]'
-                }`}>
-                  {pct === 0 ? '当前' : `${pct > 0 ? '+' : ''}${(pct * 100).toFixed(0)}%`}
-                </span>
-                <span className={`text-[9px] font-semibold ${pnl >= 0 ? 'text-[#E53935]' : 'text-[#059669]'}`}>
-                  {formatAmount(converted, cur)} {cur}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+      {/* 底部提示 */}
+      <div className="mt-auto px-3 pb-2 text-[8px] text-[#9CA3AF] text-center">
+        点击扇区或图例 → 查看明细
       </div>
     </div>
   );

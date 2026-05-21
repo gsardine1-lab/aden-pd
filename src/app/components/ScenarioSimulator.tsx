@@ -4,6 +4,7 @@ import { mockPositions, convertCurrency, formatAmount } from './mockData';
 
 interface ScenarioSimulatorProps {
   wireframe?: boolean;
+  positionId?: string;
 }
 
 const FIXED_POINTS = [0.1, 0.05, 0, -0.05, -0.1] as const;
@@ -21,12 +22,17 @@ const CUR_SYMBOL: Record<string, string> = { CNY: '¥', USD: '$', HKD: 'HK$' };
 
 const candidates = mockPositions.filter(p => p.status !== 'closed' && p.status !== 'expired');
 
-export function ScenarioSimulator({ wireframe = false }: ScenarioSimulatorProps) {
-  const [selectedId, setSelectedId] = useState(candidates[0]?.id ?? '');
+export function ScenarioSimulator({ wireframe = false, positionId }: ScenarioSimulatorProps) {
+  const fixedId = positionId;
+  const [selectedId, setSelectedId] = useState(fixedId ?? candidates[0]?.id ?? '');
   const [sliderValue, setSliderValue] = useState(0);
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (fixedId) setSelectedId(fixedId);
+  }, [fixedId]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -105,7 +111,8 @@ export function ScenarioSimulator({ wireframe = false }: ScenarioSimulatorProps)
     <div className="bg-white rounded-xl border border-[#E8ECF0] p-2.5 shadow-sm flex flex-col h-full">
       <div className="text-sm font-semibold text-[#0D1117] mb-3">持仓盈亏情景模拟</div>
 
-      {/* 可搜索的持仓选择器 */}
+      {/* 可搜索的持仓选择器 — 仅在非固定模式下显示 */}
+      {!fixedId && (
       <div className="mb-4 relative" ref={containerRef}>
         <div
           className="flex items-center border border-[#E5E7EB] rounded-lg bg-white cursor-pointer focus-within:border-[#1677FF]"
@@ -150,6 +157,16 @@ export function ScenarioSimulator({ wireframe = false }: ScenarioSimulatorProps)
           </div>
         )}
       </div>
+      )}
+      {/* 固定模式：仅显示当前标的 */}
+      {fixedId && (
+        <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB]">
+          <span className="text-[#9CA3AF] text-xs">{CUR_SYMBOL[selected.currency]}</span>
+          <span className="text-[#374151] text-xs font-medium">{selected.underlying}</span>
+          <span className="text-[#9CA3AF] text-xs">({selected.code})</span>
+          <span className="ml-auto text-[10px] text-[#9CA3AF]">到期 {selected.expiryDate}</span>
+        </div>
+      )}
 
       {/* 价格拉杆 + ±1% 按钮 */}
       <div className="mb-4">

@@ -126,9 +126,17 @@ function StatusBadge({ position, wireframe, onClose }: { position: Position; wir
   }
   if (status === 'expired') {
     return (
-      <span className={`${base} bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A]`}>
-        已到期
-      </span>
+      <div className="flex items-center gap-1">
+        <span className={`${base} bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A]`}>已到期</span>
+        {!isAden && (
+          <button
+            className={`${base} bg-[#1677FF] text-white hover:bg-[#0E5FCC] cursor-pointer`}
+            onClick={(e) => { e.stopPropagation(); onClose?.(position); }}
+          >
+            手动平仓
+          </button>
+        )}
+      </div>
     );
   }
   return (
@@ -138,14 +146,72 @@ function StatusBadge({ position, wireframe, onClose }: { position: Position; wir
   );
 }
 
+type RuleTagType = 'knockout-negotiated' | 'knockout-forced' | 'dividend-adjust' | 'dividend-none' | 'dividend-deduct-warn' | 'exercise-rule' | 'expiry-rule';
+
 interface RuleTag {
   label: string;
-  type: 'dividend-adjust' | 'dividend-none' | 'dividend-deduct' | 'dividend-deduct-warn' | 'knockout-forced' | 'knockout-negotiated';
+  type: RuleTagType;
 }
+
+const RULE_DETAIL: Record<RuleTagType, { title: string; core: string[]; desc: string[] }> = {
+  'knockout-negotiated': {
+    title: '交易规则-敲出（协商敲出）',
+    core: [
+      '日内振幅（__r__涨__/r__/__g__跌__/g__）达到30%',
+      '日内价格较上一收盘价__r__涨__/r____g__跌__/g__幅达到30%',
+      '根据具体情况，协商方案一事一议',
+    ],
+    desc: [
+      '当合约标的发生连续波动时，由背对机构和您进行协商敲出规则',
+      '满足以上任意条件则触发协商敲出，背对机构提供协商方案供您参考和选择',
+    ],
+  },
+  'knockout-forced': {
+    title: '交易规则-敲出（强制敲出）',
+    core: [
+      '__r__标的连续3个交易日涨停价收盘__/r__',
+      '__g__标的连续3个交易日跌停价收盘__/g__',
+    ],
+    desc: [
+      '当合约标的发生连续波动时，将被背对机构强制敲出',
+      '满足以上任意条件则触发强制敲出，背对机构将按照敲出当日的收盘价进行平仓并结算',
+    ],
+  },
+  'dividend-adjust': {
+    title: '交易规则-分红',
+    core: ['标的暂无预期分红，本合约不涉及分红规则。'],
+    desc: [],
+  },
+  'dividend-none': {
+    title: '交易规则-分红（不考虑分红）',
+    core: ['背对机构将不会在除权除息后对您的合约调整开仓价。'],
+    desc: ['该合约的背对机构不考虑分红'],
+  },
+  'dividend-deduct-warn': {
+    title: '交易规则-分红（提前行权扣分红）',
+    core: ['背对机构将从行权结算款中扣除对应的分红金额。'],
+    desc: ['若在除权除息日前提前行权'],
+  },
+  'exercise-rule': {
+    title: '交易规则-可行权日',
+    core: ['本合约最早可行权日期请以合约确认书为准。'],
+    desc: [],
+  },
+  'expiry-rule': {
+    title: '到期行权规则',
+    core: [
+      '市价单 / 限价单 / 时间均价单：13:50',
+      '到期行权默认结算方式：最后一小时Twap',
+    ],
+    desc: [
+      '以上为主动行权截止时间及指令失效时间',
+    ],
+  },
+};
 
 function getRuleTags(p: Position): RuleTag[] {
   const tags: RuleTag[] = [];
-  // 敲出规则（更重要，排在前面）
+  // 敲出规则
   if (p.tradingRules.knockoutRule?.includes('协商')) {
     tags.push({ label: '协商敲出', type: 'knockout-negotiated' });
   } else {
@@ -162,16 +228,22 @@ function getRuleTags(p: Position): RuleTag[] {
       tags.push({ label: '分红调整', type: 'dividend-adjust' });
     }
   }
+  /*
+   * NOTE FOR PRD: 列表中的交易规则仅做 Demo 展示用，展示敲出规则和分红规则。
+   * 实际交易规则以线上已有规则为准，以开发实际实现情况为准。
+   * 当前标签类型仅保留 knockout 和 dividend 两类，exercise/expiry 规则不在列表中展示。
+   */
   return tags;
 }
 
-const TAG_COLORS: Record<RuleTag['type'], string> = {
+const TAG_COLORS: Record<RuleTagType, string> = {
+  'knockout-negotiated': 'bg-[#F9FAFB] text-[#9CA3AF] border-[#E8ECF0]',
+  'knockout-forced': 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]',
   'dividend-adjust': 'bg-[#EFF6FF] text-[#1677FF] border-[#1677FF]/20',
   'dividend-none': 'bg-[#F3F4F6] text-[#6B7280] border-[#E5E7EB]',
-  'dividend-deduct': 'bg-[#FFF7ED] text-[#C2410C] border-[#FDBA74]',
   'dividend-deduct-warn': 'bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]',
-  'knockout-forced': 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]',
-  'knockout-negotiated': 'bg-[#F9FAFB] text-[#B0B7C3] border-[#E8ECF0]',
+  'exercise-rule': 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]',
+  'expiry-rule': 'bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]',
 };
 
 const EMPTY_FILTERS: FilterState = {
@@ -196,7 +268,6 @@ const QUICK_CURRENCIES = ['CNY', 'USD', 'HKD'];
 
 export function PositionTable({ wireframe = false, filters, onFilterChange, overriddenStatuses = {}, onOverrideStatus, positions }: PositionTableProps) {
   const baseData = positions ?? mockPositions;
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('expiryDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -206,6 +277,7 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
   const [closeFormPrice, setCloseFormPrice] = useState('');
   const [closeFormNotional, setCloseFormNotional] = useState('');
   const [closeFormDate, setCloseFormDate] = useState('2026-05-20');
+  const [ruleTooltip, setRuleTooltip] = useState<{ type: RuleTagType; x: number; y: number } | null>(null);
 
   // 打开平仓弹窗时重置表单
   useEffect(() => {
@@ -507,7 +579,6 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
               const isExpiringSoon = days >= 0 && days <= 7;
               const isHeavyLoss = displayP.returnRate < -0.2;
               const isExpired = displayP.status === 'expired';
-              const isExpanded = expandedId === displayP.id;
               const cur = displayP.currency;
               const ruleTags = getRuleTags(displayP);
 
@@ -522,11 +593,8 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
                 ? 'bg-[#F1F8E9]'
                 : idx % 2 === 0 ? 'bg-white' : 'bg-[#F9FAFB]';
 
-              const toggleExpand = () => setExpandedId(isExpanded ? null : displayP.id);
-
               return (
-                <>
-                  <tr key={displayP.id} className={`border-b border-[#F3F4F6] ${rowBg} cursor-pointer hover:bg-[#F9FAFB]`} onClick={toggleExpand}>
+                  <tr key={displayP.id} className={`border-b border-[#F3F4F6] ${rowBg}`}>
                     {/* 标的信息 — 点击跳转详情页 */}
                     <td className={`px-3 py-2.5 whitespace-nowrap sticky left-0 z-10 ${stickyBg}`} style={{ width: 100, minWidth: 100 }} onClick={(e) => e.stopPropagation()}>
                       <Link to={`/detail/${displayP.id}`} className="font-semibold text-[#0D1117] hover:text-[#1677FF] transition-colors flex items-center gap-1">
@@ -626,15 +694,22 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
                         {formatRate(displayP.returnRate)}
                       </div>
                     </td>
-                    {/* 交易规则 */}
+                    {/* 交易规则 — 仅亚丁 */}
                     <td className="px-3 py-2.5">
-                      <div className="flex flex-wrap gap-1">
-                        {ruleTags.map((tag) => (
-                          <span key={tag.label} className={`text-[9px] px-2 py-0.5 rounded font-medium whitespace-nowrap border ${TAG_COLORS[tag.type]}`}>
-                            {tag.label}
-                          </span>
-                        ))}
-                      </div>
+                      {displayP.counterparty === '亚丁' ? (
+                        <div className="flex flex-wrap gap-1">
+                          {ruleTags.map((tag) => (
+                            <span key={tag.label}
+                              onMouseEnter={e => setRuleTooltip({ type: tag.type, x: e.clientX, y: e.clientY })}
+                              onMouseLeave={() => setRuleTooltip(null)}
+                              className={`text-[9px] px-2 py-0.5 rounded font-medium whitespace-nowrap border cursor-help ${TAG_COLORS[tag.type]}`}>
+                              {tag.label}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-[#D1D5DB] text-[10px]">-</span>
+                      )}
                     </td>
                     {/* 详情链接 */}
                     <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
@@ -648,59 +723,6 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
                       </Link>
                     </td>
                   </tr>
-                  {isExpanded && (
-                    <tr key={`${displayP.id}-expanded`} className={`border-b border-[#F3F4F6] ${rowBg}`}>
-                      <td className="sticky left-0 z-10 bg-[#F9FAFB] border-r border-[#F3F4F6]" />
-                      <td className="sticky z-10 bg-[#F9FAFB]" style={{ left: 100 }} />
-                      <td colSpan={visibleCount - 2} className="px-5 py-3 bg-[#F9FAFB]">
-                        {displayP.counterparty === '亚丁' ? (
-                          <div className="grid grid-cols-2 gap-4 text-xs text-[#6B7280]">
-                            <div>
-                              <div className="font-semibold text-[#374151] mb-1">交易规则详情</div>
-                              <div className="text-[#6B7280]">行权规则：{displayP.tradingRules.exerciseRule}</div>
-                              <div className="text-[#6B7280]">
-                                到期行权：{displayP.tradingRules.expiryRule}
-                              </div>
-                              {displayP.tradingRules.knockoutRule && (
-                                <div className="text-[#6B7280]">敲出规则：{displayP.tradingRules.knockoutRule}</div>
-                              )}
-                              {displayP.tradingRules.dividendRule && (
-                                <div className={displayP.tradingRules.dividendRule.includes('提前行权扣分红') ? 'text-[#B45309]' : 'text-[#6B7280]'}>
-                                  分红处理：{displayP.tradingRules.dividendRule.includes('提前行权扣分红') ? '分红不调整且提前行权扣分红' : displayP.tradingRules.dividendRule}
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <div className="font-semibold text-[#374151] mb-1">持仓详情</div>
-                              <div>币种：{displayP.currency} | 结构：{displayP.structure}</div>
-                              <div>名义本金：{formatNotional(displayP.notionalCNY, cur)}</div>
-                              <div>期权费：{formatAmount(convertCurrency(displayP.optionPremiumCNY, cur), cur)}</div>
-                              <div className="mt-2">
-                                <Link to={`/detail/${displayP.id}`} className="inline-flex items-center gap-1 text-[#1677FF] hover:text-[#0E5FCC] hover:underline font-medium text-[11px]">
-                                  查看持仓详情
-                                  <ExternalLink size={10} />
-                                </Link>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-xs text-[#6B7280]">
-                            <div className="font-semibold text-[#374151] mb-1">持仓详情</div>
-                            <div>币种：{displayP.currency} | 结构：{displayP.structure}</div>
-                            <div>名义本金：{formatNotional(displayP.notionalCNY, cur)}</div>
-                            <div>期权费：{formatAmount(convertCurrency(displayP.optionPremiumCNY, cur), cur)}</div>
-                            <div className="mt-2">
-                              <Link to={`/detail/${displayP.id}`} className="inline-flex items-center gap-1 text-[#1677FF] hover:text-[#0E5FCC] hover:underline font-medium text-[11px]">
-                                查看持仓详情
-                                <ExternalLink size={10} />
-                              </Link>
-                            </div>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </>
               );
             })}
           </tbody>
@@ -755,7 +777,8 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
               <div>
                 <label className="text-[9px] text-[#9CA3AF] mb-0.5 block">平仓日期</label>
                 <input type="date" value={closeFormDate} onChange={e => setCloseFormDate(e.target.value)}
-                  className="w-full text-xs border border-[#E5E7EB] rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#1677FF] bg-white" />
+                  onClick={e => { e.preventDefault(); (e.target as HTMLInputElement).showPicker?.(); }}
+                  className="w-full text-xs border border-[#E5E7EB] rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#1677FF] bg-white cursor-pointer" />
               </div>
             </div>
             <div className="flex gap-2">
@@ -789,6 +812,54 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
           ))}
         </div>
       </div>
+
+      {/* 交易规则浮窗 */}
+      {ruleTooltip && (() => {
+        const d = RULE_DETAIL[ruleTooltip.type];
+        const x = Math.min(ruleTooltip.x, window.innerWidth - 320);
+        const y = Math.min(ruleTooltip.y, window.innerHeight - 400);
+        return (
+          <div className="fixed z-[100] pointer-events-none" style={{ left: x + 12, top: y - 8 }}>
+            <div className="bg-white border border-[#E8ECF0] rounded-xl shadow-2xl p-4 max-w-[300px]">
+              <div className="text-[11px] font-semibold text-[#0D1117] mb-3 pb-2 border-b border-[#F3F4F6]">{d.title}</div>
+              {d.core.length > 0 && (
+                <div className="space-y-1.5 mb-2">
+                  {d.core.map((line, i) => {
+                    // 解析 __r__...__/r__ 红色, __g__...__/g__ 绿色
+                    const parts = line.split(/(__r__|__\/r__|__g__|__\/g__)/);
+                    const spans: { text: string; color?: string }[] = [];
+                    let color: string | undefined;
+                    parts.forEach(part => {
+                      if (part === '__r__') color = '#DC2626';
+                      else if (part === '__/r__') color = undefined;
+                      else if (part === '__g__') color = '#059669';
+                      else if (part === '__/g__') color = undefined;
+                      else if (part) spans.push({ text: part, color });
+                    });
+                    return (
+                      <div key={i} className="flex items-start gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-[#DC2626] mt-1.5 flex-shrink-0" />
+                        <span className="text-[11px] font-semibold text-[#0D1117] leading-relaxed">
+                          {spans.map((s, j) => (
+                            <span key={j} style={s.color ? { color: s.color } : undefined}>{s.text}</span>
+                          ))}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {d.desc.length > 0 && (
+                <div className="border-t border-[#F3F4F6] pt-2 space-y-0.5">
+                  {d.desc.map((line, i) => (
+                    <p key={i} className="text-[9px] text-[#9CA3AF] leading-relaxed">{line}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

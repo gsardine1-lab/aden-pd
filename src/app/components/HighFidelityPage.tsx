@@ -13,9 +13,8 @@ import { StatCards } from './StatCards';
 import { DistributionChart } from './DistributionChart';
 import { ExpiryCalendar } from './ExpiryCalendar';
 import { PositionTable } from './PositionTable';
-import { DrillDownModal } from './DrillDownModal';
 import { FilterBar } from './FilterBar';
-import { mockPositions, Position, getRemainingNotional, getCloseRecords } from './mockData';
+import { mockPositions, Position, getRemainingNotional, getCloseRecords, Currency, convertCurrency, formatAmount } from './mockData';
 
 export interface FilterState {
   search: string;
@@ -30,6 +29,8 @@ export interface FilterState {
   notionalMax: string;
   notionalRange: string;
   returnRateRange: string;
+  returnRateMin: string;
+  returnRateMax: string;
   pnlRange: string;
   tags: string;
 }
@@ -47,6 +48,8 @@ const EMPTY_FILTERS: FilterState = {
   notionalMax: '',
   notionalRange: '',
   returnRateRange: '',
+  returnRateMin: '',
+  returnRateMax: '',
   pnlRange: '',
   tags: '',
 };
@@ -58,7 +61,9 @@ function isFilterActive(f: FilterState): boolean {
 export function applyFilters(positions: Position[], filters: FilterState): Position[] {
   return positions.filter((p) => {
     // 历史持仓不在主列表中展示
-    if (p.status === 'closed' || p.status === 'expired') return false;
+    // 亚丁过期=已平仓不展示；非亚丁过期仍展示（可手动平仓）
+    if (p.status === 'closed') return false;
+    if (p.status === 'expired' && p.counterparty === '亚丁') return false;
     if (filters.search) {
       const s = filters.search.toLowerCase();
       if (!p.underlying.includes(filters.search) && !p.code.toLowerCase().includes(s)) return false;
@@ -72,7 +77,7 @@ export function applyFilters(positions: Position[], filters: FilterState): Posit
     if (filters.expiryDateFrom || filters.expiryDateTo) {
       const expiry = new Date(p.expiryDate).getTime();
       if (filters.expiryDateFrom && expiry < new Date(filters.expiryDateFrom).getTime()) return false;
-      if (filters.expiryDateTo && expiry > new Date(filters.expiryDateTo).getTime() + 86400000) return false;
+      if (filters.expiryDateTo && expiry > new Date(filters.expiryDateTo).getTime()) return false;
     }
     if (filters.notionalMin || filters.notionalMax) {
       const n = p.notionalCNY / 10000;
@@ -86,6 +91,12 @@ export function applyFilters(positions: Position[], filters: FilterState): Posit
       else if (filters.returnRateRange === '-10%~0%' && (p.returnRate < -0.1 || p.returnRate >= 0)) return false;
       else if (filters.returnRateRange === '0%~10%' && (p.returnRate < 0 || p.returnRate >= 0.1)) return false;
       else if (filters.returnRateRange === '>10%' && p.returnRate <= 0.1) return false;
+    }
+    if (filters.returnRateMin) {
+      if (p.returnRate < Number(filters.returnRateMin)) return false;
+    }
+    if (filters.returnRateMax) {
+      if (p.returnRate >= Number(filters.returnRateMax)) return false;
     }
     if (filters.pnlRange) {
       if (filters.pnlRange === 'loss' && p.pnlCNY >= 0) return false;
@@ -114,9 +125,6 @@ export function HighFidelityPage() {
   const [showImportMenu, setShowImportMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
-  const [drillModal, setDrillModal] = useState<{ open: boolean; title: string; positions: Position[] }>({
-    open: false, title: '', positions: [],
-  });
   const [overriddenStatuses, setOverriddenStatuses] = useState<Record<string, string>>(() => {
     try {
       const saved = localStorage.getItem('overriddenStatuses');
@@ -132,9 +140,13 @@ export function HighFidelityPage() {
     });
   };
 
-  const openDrillDown = (positions: Position[], title: string) => {
-    setDrillModal({ open: true, title, positions });
-  };
+  const [pnlCurrency, setPnlCurrency] = useState<Currency>('CNY');
+
+  const totalClosedPnl = useMemo(() => {
+    return mockPositions
+      .filter(p => p.status === 'closed')
+      .reduce((sum, p) => sum + (p.closingPnlCNY ?? p.cumulativePnlCNY), 0);
+  }, []);
 
   const filterActive = isFilterActive(filters);
 
@@ -146,7 +158,8 @@ export function HighFidelityPage() {
       let pos = override ? { ...p, status: override as Position['status'] } : p;
       // 根据平仓记录判断是否完全平仓
       const remaining = getRemainingNotional(pos);
-      if (remaining <= 0 && pos.status !== 'expired') {
+      // 亚丁自动平仓，不会有过期状态；非亚丁过期可继续手动平仓
+      if (remaining <= 0 && (pos.status !== 'expired' || pos.counterparty === '亚丁')) {
         pos = { ...pos, status: 'closed' as const };
       } else if (remaining > 0 && remaining < pos.notionalCNY) {
         // 部分平仓，更新名本
@@ -162,7 +175,7 @@ export function HighFidelityPage() {
       } catch {}
       return pos;
     });
-    return withOverrides.filter(p => p.status !== 'closed' && p.status !== 'expired');
+    return withOverrides.filter(p => p.status !== 'closed' && !(p.status === 'expired' && p.counterparty === '亚丁'));
   }, [filters, filterActive, overriddenStatuses]);
 
   const handleClearFilter = () => {
@@ -180,6 +193,24 @@ export function HighFidelityPage() {
             </Link>
           </div>
           <div className="flex items-center gap-2">
+            {/* 持仓总盈亏 — 点击进历史持仓 */}
+            <Link
+              to="/historical"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs h-9 hover:border-[#D1D5DB] hover:bg-[#F9FAFB] transition-all bg-white"
+            >
+              <span className="text-[#9CA3AF] font-normal">持仓总盈亏</span>
+              <span className="text-[#E5E7EB]">|</span>
+              <select value={pnlCurrency} onChange={e => setPnlCurrency(e.target.value as Currency)}
+                onClick={e => e.preventDefault()}
+                className="text-[10px] bg-transparent focus:outline-none text-[#6B7280] font-medium">
+                <option value="CNY">CNY</option>
+                <option value="USD">USD</option>
+                <option value="HKD">HKD</option>
+              </select>
+              <span className={`font-bold ${totalClosedPnl >= 0 ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
+                {totalClosedPnl >= 0 ? '+' : ''}{formatAmount(convertCurrency(totalClosedPnl, pnlCurrency), pnlCurrency, false)}
+              </span>
+            </Link>
             <Link
               to="/historical"
               className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-[#F9FAFB] text-[#374151] text-sm font-medium rounded-lg border border-[#E5E7EB] transition-colors"
@@ -265,13 +296,13 @@ export function HighFidelityPage() {
             filteredPositions={displayPositions}
             isFiltered={filterActive}
             onClearFilter={handleClearFilter}
-            onDrillDown={openDrillDown}
+            onFilter={(partial) => setFilters(prev => ({ ...prev, ...partial }))}
 
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <DistributionChart onDrillDown={openDrillDown} positions={displayPositions} />
-            <ExpiryCalendar onDrillDown={openDrillDown} positions={displayPositions} />
+          <div className="grid grid-cols-[5fr_1fr] gap-4">
+            <ExpiryCalendar positions={displayPositions} />
+            <DistributionChart onFilter={(min, max) => setFilters(prev => ({ ...prev, returnRateMin: String(min), returnRateMax: String(max) }))} positions={displayPositions} />
           </div>
 
           <PositionTable
@@ -287,13 +318,6 @@ export function HighFidelityPage() {
             <div>所有盈亏计算均为预估，实际盈亏以最终行权/平仓时的成交价格和交易规则为准。平台仅提供交易撮合和信息展示服务，不构成任何投资建议</div>
           </div>
 
-          <DrillDownModal
-            open={drillModal.open}
-            title={drillModal.title}
-            positions={drillModal.positions}
-            onClose={() => setDrillModal({ open: false, title: '', positions: [] })}
-            overriddenStatuses={overriddenStatuses}
-          />
         </div>
       </div>
     </div>

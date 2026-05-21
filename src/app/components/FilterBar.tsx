@@ -23,8 +23,17 @@ function countTagMatches(tag: string): number {
 import { FilterState } from './HighFidelityPage';
 
 const UNIQUE_STRUCTURES = [...new Set(mockPositions.map((p) => p.structure))].sort();
-const QUICK_STRUCTURES = ['100%Call', '103%Call', '105%Call'];
 const QUICK_CURRENCIES = ['CNY', 'USD', 'HKD'];
+
+// 按持仓数量排序的交易对手列表（不含亚丁）
+const ALL_COUNTERPARTIES = (() => {
+  const count: Record<string, number> = {};
+  mockPositions.forEach(p => {
+    if (p.counterparty === '亚丁') return;
+    count[p.counterparty] = (count[p.counterparty] || 0) + 1;
+  });
+  return Object.entries(count).sort((a, b) => b[1] - a[1]).map(([name]) => name);
+})();
 
 function FieldSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { v: string; l: string }[] }) {
   return (
@@ -47,11 +56,15 @@ interface FilterBarProps {
 export function FilterBar({ filters, onFilterChange, onClearFilter }: FilterBarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [cptyExpanded, setCptyExpanded] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const f = filters;
   const hasActiveFilters = Object.values(f).some((v) => v !== '');
   const setFilter = (partial: Partial<FilterState>) => onFilterChange({ ...f, ...partial });
+
+  const visibleCounterparties = cptyExpanded ? ALL_COUNTERPARTIES : ALL_COUNTERPARTIES.slice(0, 3);
+  const hasMore = ALL_COUNTERPARTIES.length > 3;
 
   const searchSuggestions = useMemo(() => {
     const s = f.search.toLowerCase();
@@ -72,84 +85,16 @@ export function FilterBar({ filters, onFilterChange, onClearFilter }: FilterBarP
     <div className="bg-white border-b border-[#E8ECF0] px-4 py-2">
       <div className="flex items-center flex-wrap gap-x-3 gap-y-2">
         {/* 快捷筛选标签 */}
-        <div className="flex items-center gap-1.5">
-          {['亚丁', '非亚丁'].map((cpty) => (
-            <button key={cpty} onClick={() => setFilter({ counterparty: f.counterparty === cpty ? '' : cpty })}
-              className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${
-                f.counterparty === cpty ? 'bg-[#1677FF] text-white border-[#1677FF]' : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#1677FF] hover:text-[#1677FF] bg-white'
-              }`}>{cpty}</button>
-          ))}
-          <span className="text-[#E5E7EB] mx-0.5">|</span>
-          {QUICK_STRUCTURES.map((s) => (
-            <button key={s} onClick={() => setFilter({ structure: f.structure === s ? '' : s })}
-              className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${
-                f.structure === s ? 'bg-[#1677FF] text-white border-[#1677FF]' : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#1677FF] hover:text-[#1677FF] bg-white'
-              }`}>{s}</button>
-          ))}
-          <span className="text-[#E5E7EB] mx-0.5">|</span>
-          {QUICK_CURRENCIES.map((c) => (
-            <button key={c} onClick={() => setFilter({ currency: f.currency === c ? '' : c })}
-              className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${
-                f.currency === c ? 'bg-[#1677FF] text-white border-[#1677FF]' : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#1677FF] hover:text-[#1677FF] bg-white'
-              }`}>{c}</button>
-          ))}
-          <span className="text-[#E5E7EB] mx-0.5">|</span>
-          <button
-            onClick={() => {
-              if (f.expiryDateTo) { setFilter({ expiryDateFrom: '', expiryDateTo: '' }); }
-              else { const d = new Date('2026-05-14'); d.setDate(d.getDate() + 7); setFilter({ expiryDateTo: d.toISOString().slice(0, 10) }); }
-            }}
-            className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${
-              f.expiryDateTo ? 'bg-[#E53935] text-white border-[#E53935]' : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#E53935] hover:text-[#E53935] bg-white'
-            }`}>临近到期≤7天</button>
-          {/* 标签快捷筛选 */}
-          {f.tags && f.tags.split(',').filter(Boolean).length > 0 && (
-            <>
-              <span className="text-[#E5E7EB] mx-0.5">|</span>
-              {f.tags.split(',').filter(Boolean).map(tag => (
-                <button key={tag}
-                  onClick={() => { const current = f.tags.split(',').filter(Boolean); const next = current.filter(t => t !== tag); setFilter({ tags: next.join(',') }); }}
-                  className="text-[10px] px-2 py-0.5 rounded-md border bg-[#EFF6FF] text-[#1677FF] border-[#1677FF]/30 hover:bg-[#1677FF] hover:text-white transition-colors max-w-[120px] truncate" title={tag}>{tag}</button>
-              ))}
-            </>
-          )}
-          {hasActiveFilters && (
-            <button onClick={onClearFilter} className="text-[10px] text-[#1677FF] hover:underline ml-1 flex-shrink-0">清空</button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 ml-auto">
-          <div className="relative" ref={searchRef}>
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] z-10" />
-            <input type="text" placeholder="搜索标的名称/代码" value={f.search}
-              onChange={(e) => { setFilter({ search: e.target.value }); setSearchOpen(true); }}
-              onFocus={() => setSearchOpen(true)}
-              className="pl-7 pr-3 py-1.5 text-xs border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#1677FF] w-44 bg-[#F9FAFB]" />
-            {searchOpen && searchSuggestions.length > 0 && (
-              <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-[#E8ECF0] rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                {searchSuggestions.map((p) => (
-                  <div key={p.id} className="flex items-center px-3 py-1.5 cursor-pointer text-xs hover:bg-[#F9FAFB]"
-                    onClick={() => { setFilter({ search: p.underlying }); setSearchOpen(false); }}>
-                    <span className="text-[#374151] font-medium">{p.underlying}</span>
-                    <span className="text-[#9CA3AF] ml-1">({p.code})</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {searchOpen && f.search && searchSuggestions.length === 0 && (
-              <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-[#E8ECF0] rounded-lg shadow-lg px-3 py-2 text-xs text-[#9CA3AF] text-center">无匹配结果</div>
-            )}
-          </div>
-
+        <div className="flex items-center gap-1.5 flex-wrap">
           {/* 高级筛选按钮 */}
           <div className="relative">
             <button id="filter-btn"
               onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg transition-colors ${
-                hasActiveFilters ? 'bg-[#EFF6FF] border-[#1677FF] text-[#1677FF]' : 'border-[#E5E7EB] text-[#374151] hover:bg-[#F9FAFB]'
+              className={`flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] border rounded-md transition-colors ${
+                hasActiveFilters ? 'bg-[#EFF6FF] border-[#1677FF] text-[#1677FF]' : 'border-[#E5E7EB] text-[#6B7280] hover:bg-[#F9FAFB]'
               }`}>
-              <Filter size={12} />筛 选
-              {hasActiveFilters && <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-[#1677FF] text-white text-[8px]">!</span>}
+              <Filter size={11} />筛选
+              {hasActiveFilters && <span className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-[#1677FF] text-white text-[7px]">!</span>}
             </button>
             {showFilterDropdown && (() => {
               const filterBtn = document.getElementById('filter-btn');
@@ -158,7 +103,7 @@ export function FilterBar({ filters, onFilterChange, onClearFilter }: FilterBarP
               return (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowFilterDropdown(false)} />
-                <div className={`absolute right-0 min-w-[320px] max-w-[600px] bg-white rounded-lg shadow-xl border border-[#E8ECF0] z-20 ${openUp ? 'bottom-full mb-1' : 'top-full mt-1'}`} style={{ maxHeight: '460px', overflow: 'hidden' }}>
+                <div className={`absolute left-0 min-w-[320px] max-w-[600px] bg-white rounded-lg shadow-xl border border-[#E8ECF0] z-20 ${openUp ? 'bottom-full mb-1' : 'top-full mt-1'}`} style={{ maxHeight: '460px', overflow: 'hidden' }}>
                   <div className="sticky top-0 bg-white z-10 px-4 pt-3 pb-2 border-b border-[#F3F4F6] flex items-center justify-between">
                     <span className="text-xs font-semibold text-[#0D1117]">筛选条件</span>
                     {hasActiveFilters && <button onClick={onClearFilter} className="text-[10px] text-[#1677FF] hover:underline">清空全部</button>}
@@ -166,7 +111,7 @@ export function FilterBar({ filters, onFilterChange, onClearFilter }: FilterBarP
                   <div className="flex px-4 py-3 gap-4">
                     <div className="w-60 flex-shrink-0 space-y-3">
                       <div className="grid grid-cols-2 gap-2">
-                        <FieldSelect label="交易对手" value={f.counterparty} onChange={v => setFilter({ counterparty: v })} options={[{v:'',l:'全部'},{v:'亚丁',l:'亚丁'},{v:'非亚丁',l:'非亚丁'}]} />
+                        <FieldSelect label="交易对手" value={f.counterparty} onChange={v => setFilter({ counterparty: v })} options={[{v:'',l:'全部'},{v:'亚丁',l:'亚丁'},...ALL_COUNTERPARTIES.map(c=>({v:c,l:c}))]} />
                         <FieldSelect label="币种" value={f.currency} onChange={v => setFilter({ currency: v })} options={[{v:'',l:'全部'},{v:'CNY',l:'CNY'},{v:'USD',l:'USD'},{v:'HKD',l:'HKD'}]} />
                       </div>
                       <div className="border-t border-[#F3F4F6]" />
@@ -223,6 +168,70 @@ export function FilterBar({ filters, onFilterChange, onClearFilter }: FilterBarP
               </>
             );})()}
           </div>
+          <span className="text-[#E5E7EB]">|</span>
+          <button onClick={() => setFilter({ counterparty: f.counterparty === '亚丁' ? '' : '亚丁' })}
+            className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${
+              f.counterparty === '亚丁' ? 'bg-[#1677FF] text-white border-[#1677FF]' : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#1677FF] hover:text-[#1677FF] bg-white'
+            }`}>亚丁</button>
+          <span className="text-[#E5E7EB]">|</span>
+          {visibleCounterparties.map((cpty) => (
+            <button key={cpty} onClick={() => setFilter({ counterparty: f.counterparty === cpty ? '' : cpty })}
+              className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${
+                f.counterparty === cpty ? 'bg-[#1677FF] text-white border-[#1677FF]' : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#1677FF] hover:text-[#1677FF] bg-white'
+              }`}>{cpty}</button>
+          ))}
+          {hasMore && (
+            <button onClick={() => setCptyExpanded(!cptyExpanded)}
+              className="text-[10px] px-1.5 py-0.5 rounded-md text-[#9CA3AF] hover:text-[#6B7280] hover:bg-[#F3F4F6] transition-colors">
+              {cptyExpanded ? '收起' : `+${ALL_COUNTERPARTIES.length - 3}`}
+            </button>
+          )}
+          <span className="text-[#E5E7EB]">|</span>
+          {QUICK_CURRENCIES.map((c) => (
+            <button key={c} onClick={() => setFilter({ currency: f.currency === c ? '' : c })}
+              className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors ${
+                f.currency === c ? 'bg-[#1677FF] text-white border-[#1677FF]' : 'border-[#E5E7EB] text-[#6B7280] hover:border-[#1677FF] hover:text-[#1677FF] bg-white'
+              }`}>{c}</button>
+          ))}
+          {/* 标签快捷筛选 */}
+          {f.tags && f.tags.split(',').filter(Boolean).length > 0 && (
+            <>
+              <span className="text-[#E5E7EB]">|</span>
+              {f.tags.split(',').filter(Boolean).map(tag => (
+                <button key={tag}
+                  onClick={() => { const current = f.tags.split(',').filter(Boolean); const next = current.filter(t => t !== tag); setFilter({ tags: next.join(',') }); }}
+                  className="text-[10px] px-2 py-0.5 rounded-md border bg-[#EFF6FF] text-[#1677FF] border-[#1677FF]/30 hover:bg-[#1677FF] hover:text-white transition-colors max-w-[120px] truncate" title={tag}>{tag}</button>
+              ))}
+            </>
+          )}
+          {hasActiveFilters && (
+            <button onClick={onClearFilter} className="text-[10px] text-[#1677FF] hover:underline ml-1 flex-shrink-0">清空</button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <div className="relative" ref={searchRef}>
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] z-10" />
+            <input type="text" placeholder="搜索标的名称/代码" value={f.search}
+              onChange={(e) => { setFilter({ search: e.target.value }); setSearchOpen(true); }}
+              onFocus={() => setSearchOpen(true)}
+              className="pl-7 pr-3 py-1.5 text-xs border border-[#E5E7EB] rounded-lg focus:outline-none focus:border-[#1677FF] w-44 bg-[#F9FAFB]" />
+            {searchOpen && searchSuggestions.length > 0 && (
+              <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-[#E8ECF0] rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {searchSuggestions.map((p) => (
+                  <div key={p.id} className="flex items-center px-3 py-1.5 cursor-pointer text-xs hover:bg-[#F9FAFB]"
+                    onClick={() => { setFilter({ search: p.underlying }); setSearchOpen(false); }}>
+                    <span className="text-[#374151] font-medium">{p.underlying}</span>
+                    <span className="text-[#9CA3AF] ml-1">({p.code})</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {searchOpen && f.search && searchSuggestions.length === 0 && (
+              <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-[#E8ECF0] rounded-lg shadow-lg px-3 py-2 text-xs text-[#9CA3AF] text-center">无匹配结果</div>
+            )}
+          </div>
+
         </div>
       </div>
     </div>

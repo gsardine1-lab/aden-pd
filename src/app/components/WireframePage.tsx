@@ -105,10 +105,66 @@ export function WireframePage() {
           </div>
 
           {/* ===== 中部双模块 ===== */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* 持仓分布 + 情景模拟（整合在一个卡片内） */}
+          <div className="grid grid-cols-[5fr_1fr] gap-4">
+            {/* 到期日历 */}
             <div className={`${BG_CARD} border ${B} rounded-lg p-4`}>
-              {/* 持仓分布部分 */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className={`text-[11px] font-semibold ${TXT}`}>到期合约 · 共 N 笔</span>
+                  <div className={`text-[8px] px-1.5 py-0.5 rounded border border-[#CCCCCC] bg-[#F0F0F0] text-[#999999]`}>近7天</div>
+                </div>
+                <span className={`text-[8px] ${TXT_L}`}>5/14 → 6/13</span>
+              </div>
+              <div className="flex gap-2">
+                {/* 左侧日期栏 */}
+                <div className="w-[70px] flex-shrink-0 flex flex-col gap-0.5 max-h-[244px] overflow-y-auto px-1.5 py-1">
+                  {[0,1,2,3,4,5,6,7,8,9].map(i => {
+                    const d = new Date('2026-05-14');
+                    d.setDate(d.getDate() + i);
+                    const sel = i === 6;
+                    return (
+                      <div key={i} className={`rounded-md border px-1.5 py-1 flex items-center gap-1.5 flex-shrink-0 ${sel ? 'border-[#999999] bg-[#E8E8E8]' : i <= 6 ? 'border-[#DDDDDD] bg-[#F8F8F8]' : 'border-[#E0E0E0]'}`}>
+                        <div>
+                          <div className="text-[9px] font-semibold text-[#666666] leading-tight">{d.getMonth()+1}/{d.getDate()}</div>
+                          <div className="text-[7px] text-[#AAAAAA] leading-tight">{['日','一','二','三','四','五','六'][d.getDay()]}</div>
+                        </div>
+                        {i === 6 ? <span className="ml-auto text-[8px] px-1 py-px rounded-full bg-[#CCCCCC] text-[#888888] font-bold">12</span>
+                         : i === 3 ? <span className="ml-auto text-[8px] px-1 py-px rounded-full bg-[#E0E0E0] text-[#888888] font-bold">3</span>
+                         : <span className="ml-auto text-[8px] text-[#DDDDDD]">-</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* 右侧卡片区 */}
+                <div className="flex-1 min-w-0 max-h-[244px] flex flex-col">
+                  <div className="text-[10px] font-medium text-[#666666] mb-1.5">5月20日（周三）· 12 笔合约到期</div>
+                  <div className="flex-1 overflow-y-auto min-h-0">
+                  <div className="grid grid-cols-4 gap-1">
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(i => (
+                      <div key={i} className="rounded-md border border-[#D8D8D8] bg-[#F5F5F5] px-1.5 py-1">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-[9px] font-semibold text-[#666666]">标的{i}</span>
+                          <span className="text-[9px] font-semibold text-[#888888]">+0.00%</span>
+                        </div>
+                        <div className="text-[7px] text-[#AAAAAA] mb-0.5">代码</div>
+                        <div className="flex items-center gap-0.5">
+                          <span className="text-[7px] px-1 py-px rounded bg-[#E0E0E0] text-[#888888]">对手</span>
+                          <span className="text-[7px] px-1 py-px rounded bg-[#E0E0E0] text-[#888888]">结构</span>
+                          <span className="text-[7px] px-1 py-px rounded bg-[#E0E0E0] text-[#888888]">期限</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  </div>
+                </div>
+              </div>
+              <div className={`mt-2 pt-2 border-t ${BD} text-[8px] ${TXT_L} flex gap-3 flex-wrap`}>
+                <span>● 亚丁</span><span>行权 可申请行权</span><span className="ml-auto">点击卡片 → 持仓详情</span>
+              </div>
+            </div>
+
+            {/* 持仓分布 */}
+            <div className={`${BG_CARD} border ${B} rounded-lg p-4`}>
               <div className="flex items-center justify-between mb-3">
                 <span className={`text-[11px] font-semibold ${TXT}`}>持仓分布（按收益率）共 X 个持仓</span>
               </div>
@@ -130,58 +186,6 @@ export function WireframePage() {
               <div className={`mt-3 pt-2 border-t ${BD} text-[8px] ${TXT_L}`}>
                 🔗 点击饼图扇区或图例 → 持仓明细弹窗 · 底部：香草期权风险说明
               </div>
-
-              {/* 情景模拟部分 */}
-              <div className={`mt-4 pt-3 border-t border-dashed ${B}`}>
-                <div className={`text-[11px] font-semibold ${TXT} mb-3`}>持仓盈亏情景模拟</div>
-                <div className={`h-7 border ${B} rounded ${BG_INPUT} flex items-center px-2 text-[9px] ${TXT_L} mb-3`}>🔍 搜索持仓（聚焦弹出建议列表）...</div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[9px] ${TXT_L}`}>-100%</span>
-                    <div className="flex-1 h-1.5 bg-[#EAEAEA] rounded-full relative">
-                      <div className="absolute w-3 h-3 bg-[#B0B0B0] rounded-full -top-0.5" style={{ left: '45%' }} />
-                    </div>
-                    <span className={`text-[9px] ${TXT_L}`}>+100%</span>
-                  </div>
-                  <div className="flex gap-1">
-                    {['+10%', '+5%', '当前市价', '-5%', '-10%'].map(s => (
-                      <span key={s} className={`text-[8px] px-2 py-0.5 rounded border ${B} ${s === '当前市价' ? `bg-[#C0C0C0] ${TXT_M}` : TXT_L}`}>{s}</span>
-                    ))}
-                  </div>
-                  <div className={`${BG_INPUT} rounded p-2 text-[9px] ${TXT_L}`}>
-                    模拟价格：— &nbsp; 预估盈亏：—
-                  </div>
-                </div>
-                <div className={`mt-2 text-[8px] ${TXT_L}`}>
-                  拉杆和固定场景按钮独立运作 · 偏离固定点时底部新增一行 · 底部免责声明
-                </div>
-              </div>
-            </div>
-
-            {/* 到期日历 */}
-            <div className={`${BG_CARD} border ${B} rounded-lg p-4`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`text-[11px] font-semibold ${TXT}`}>到期日历（未来30天）</span>
-                <div className="flex items-center gap-1 bg-[#EAEAEA] rounded p-0.5">
-                  <span className={`text-[9px] px-2 py-0.5 rounded bg-white ${TXT}`}>按到期时间</span>
-                  <span className={`text-[9px] px-2 py-0.5 rounded ${TXT_L}`}>按名称</span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                {[1,2,3,4,5,6,7].map(i => (
-                  <div key={i} className="flex items-center gap-1.5">
-                    <span className={`text-[9px] ${TXT_L} w-16 truncate`}>● 标的{i}</span>
-                    <div className="flex-1 h-3 bg-[#EAEAEA] rounded-full relative overflow-hidden">
-                      <div className="absolute left-0 h-full bg-[#C0C0C0] rounded-full" style={{ width: `${30 + i * 10}%` }} />
-                    </div>
-                    <span className={`text-[8px] ${TXT_L} w-14`}>预估净收益</span>
-                  </div>
-                ))}
-              </div>
-              <div className={`mt-2 pt-2 border-t ${BD} flex items-center gap-3 flex-wrap text-[8px] ${TXT_L}`}>
-                <span>● 亚丁标记</span><span>▸ 行权标签</span><span>● 临近到期</span><span className="ml-auto">日期范围</span>
-              </div>
-              <div className={`mt-1 text-[8px] ${TXT_L}`}>🔗 点击行 → 持仓明细弹窗</div>
             </div>
           </div>
 
