@@ -96,6 +96,7 @@ const NAV = [
   { id: 's12', label: '九、金额展示规范' },
   { id: 's14', label: '十、批量导入校验规则' },
   { id: 's15', label: '十一、功能模块清单与闭环分析' },
+  { id: 's16', label: '十二、白箱测试要点' },
 ];
 
 export function PrdPage() {
@@ -631,6 +632,116 @@ export function PrdPage() {
             </div>
           </section>
 
+
+          {/* ============ 十二、白箱测试要点 ============ */}
+          <section id="s16" data-sec="s16">
+            <h2 className="text-lg font-bold text-[#0D1117] mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-md bg-[#1677FF] text-white flex items-center justify-center text-xs font-bold">十二</span>
+              白箱测试要点
+            </h2>
+            <div className="space-y-4">
+              <div className="bg-white rounded-xl border border-[#E8ECF0] p-6">
+                <h3 className="text-sm font-semibold text-[#374151] mb-2">12.1 持仓状态流转</h3>
+                <div className="space-y-1 text-sm text-[#6B7280]">
+                  <p>· 未到期 → 进入行权窗口且盈利 → 状态应变为「可行权且盈利」</p>
+                  <p>· 未到期 → 进入行权窗口但亏损 → 状态应变为「可行权但亏损」（仅亚丁）</p>
+                  <p>· 未到期 → 到期日已过 → 亚丁应直接变为「已平仓」；非亚丁应变为「已到期」</p>
+                  <p>· 可行权且盈利 → 用户行权 → 变为「已平仓」，进入历史持仓</p>
+                  <p>· 可行权但亏损 → 到期 → 亚丁自动行权变「已平仓」；非亚丁变「已到期」</p>
+                  <p>· 已到期 → 手动平仓 → 变为「已平仓」</p>
+                  <p>· 已平仓为最终态，不应再发生状态变化</p>
+                  <p>· 累平仓名本达到开仓名本时，状态应自动覆盖为「已平仓」</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-[#E8ECF0] p-6">
+                <h3 className="text-sm font-semibold text-[#374151] mb-2">12.2 筛选逻辑</h3>
+                <div className="space-y-1 text-sm text-[#6B7280]">
+                  <p>· 搜索：输入标的名或代码的任意子串，应命中对应持仓；大小写不敏感</p>
+                  <p>· 交易对手「非亚丁」：应排除所有亚丁持仓，仅保留非亚丁</p>
+                  <p>· 状态筛选：选「可行权且盈利」应仅命中该状态的持仓</p>
+                  <p>· 到期日范围：起始日 ≤ 到期日 ≤ 截止日的持仓均命中</p>
+                  <p>· 名本范围：名本在最小值和最大值之间的持仓命中（含边界）</p>
+                  <p>· 收益率预设区间与自定义最小/最大值应各自独立，互不覆盖</p>
+                  <p>· 多条件叠加时为 AND 逻辑，所有条件同时满足才命中</p>
+                  <p>· 筛选结果变更后统计卡片和列表应同步更新</p>
+                  <p>· 预设排除：状态为「已平仓」的持仓永远不出现；亚丁状态为「已到期」的持仓永远不出现</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-[#E8ECF0] p-6">
+                <h3 className="text-sm font-semibold text-[#374151] mb-2">12.3 关键事件生成</h3>
+                <div className="space-y-1 text-sm text-[#6B7280]">
+                  <p>· 建仓事件：所有持仓均应生成，日期为开仓日；亚丁带订单号，非亚丁不带</p>
+                  <p>· 除权除息 + 分红调整：仅亚丁 + 有行情 + 存在分红规则时生成</p>
+                  <p>· ST记录：有行情 + 持仓标签含「ST」时生成两个事件（ST + 解除ST）</p>
+                  <p>· 停复牌：有行情 + 持仓标签含「停牌」时生成两个事件（停牌 + 复牌）</p>
+                  <p>· 行权：状态为可行权或已平仓时生成；已平仓时改为「平仓结算」，状态为「已结算」</p>
+                  <p>· 外部录入持仓或无行情数据：仅生成建仓和行权，其余事件均不出现</p>
+                  <p>· 非亚丁持仓的除权除息和分红调整事件不应出现</p>
+                  <p>· 事件按日期升序排列</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-[#E8ECF0] p-6">
+                <h3 className="text-sm font-semibold text-[#374151] mb-2">12.4 平仓流程</h3>
+                <div className="space-y-1 text-sm text-[#6B7280]">
+                  <p>· 仅非亚丁持仓可触发手动平仓；亚丁不应出现手动平仓入口</p>
+                  <p>· 单次平仓名本小于剩余名本时，剩余名本应正确扣减，状态不变</p>
+                  <p>· 累计平仓名本达到开仓名本时，状态自动变为「已平仓」</p>
+                  <p>· 平仓记录应正确写入浏览器本地存储，刷新后不丢失</p>
+                  <p>· 无手动平仓记录的已平仓持仓，应自动生成一条默认记录（亚丁取到期日、非亚丁取到期日前2天）</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-[#E8ECF0] p-6">
+                <h3 className="text-sm font-semibold text-[#374151] mb-2">12.5 金额格式化</h3>
+                <div className="space-y-1 text-sm text-[#6B7280]">
+                  <p>· 名本格式化：应以「万」为单位 + 币种展示，不足 1 万时显示小数</p>
+                  <p>· 汇总级大额：应展示完整数字 + 括号简写（如 7,609,000（760万））</p>
+                  <p>· 收益/费用：仅完整数字，无括号简写</p>
+                  <p>· 百分比：始终带正负号，保留两位小数</p>
+                  <p>· 正值为红色系、负值为绿色系（名本和估值等中性金额为黑色）</p>
+                  <p>· 汇率换算：CNY→USD 除以 7.23，CNY→HKD 除以 0.927，反向乘以对应汇率</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-[#E8ECF0] p-6">
+                <h3 className="text-sm font-semibold text-[#374151] mb-2">12.6 字段联动计算</h3>
+                <div className="space-y-1 text-sm text-[#6B7280]">
+                  <p>· 执行价 = 开仓价 × 结构比例（如 1620 × 103% = 1668.6）</p>
+                  <p>· 期权费 = 开仓名本 × 费率 ÷ 100</p>
+                  <p>· 到期日 = 开仓日 + 期限（周/月），修改开仓日或期限后到期日应联动更新</p>
+                  <p>· 剩余名本 = 开仓名本 − 累计已平仓名本，结果不应为负数</p>
+                  <p>· 收益率 = 预估净收益 ÷ 昨日持仓总市值，昨日市值为 0 时需防除零</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-[#E8ECF0] p-6">
+                <h3 className="text-sm font-semibold text-[#374151] mb-2">12.7 批量导入校验</h3>
+                <div className="space-y-1 text-sm text-[#6B7280]">
+                  <p>· 必填字段任一为空 → 标记为错误，阻止导入</p>
+                  <p>· 标的名或代码不在映射表中 → 标记为警告，不阻止导入</p>
+                  <p>· 不校验：日期倒挂、费率异常值、名本量级、结构非标、周末日期、计算结果偏差</p>
+                  <p>· 修改字段后应自动重新校验，状态实时刷新</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-[#E8ECF0] p-6">
+                <h3 className="text-sm font-semibold text-[#374151] mb-2">12.8 亚丁 vs 非亚丁差异</h3>
+                <div className="space-y-1 text-sm text-[#6B7280]">
+                  <p>· 亚丁持仓的操作列为「申请行权」按钮（盈利红/亏损灰），非亚丁为「手动平仓」按钮</p>
+                  <p>· 亚丁未到可行权日时显示标签文字，非亚丁同状态下直接显示「手动平仓」按钮</p>
+                  <p>· 亚丁的交易规则列展示敲出/分红标签，非亚丁不展示</p>
+                  <p>· 亚丁的详情页展示 4 张交易规则卡片，非亚丁不展示</p>
+                  <p>· 亚丁的关键事件含除权除息和分红调整，非亚丁不含</p>
+                  <p>· 亚丁建仓和行权事件带订单号，非亚丁不带</p>
+                  <p>· 亚丁到期自动行权进入历史持仓，非亚丁到期保留在列表中待手动平仓</p>
+                </div>
+              </div>
+
+            </div>
+          </section>
 
           <div className="text-[10px] text-[#9CA3AF] text-center pb-8">
             版本 V3.3 · 2026-05-22 · 随原型迭代同步更新

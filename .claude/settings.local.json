@@ -69,7 +69,17 @@
       "Bash(grep -n 'className=\".*\\\\${' src/app/components/WireframeSubPages.tsx src/app/components/WireframePage.tsx)",
       "Bash(grep -n \"CUR_SYMBOL\\\\|¥\\\\|HK\\\\$|\\\\\\\\.currency\\\\|cur ==\" src/app/components/ScenarioSimulator.tsx)",
       "Bash(python3)",
-      "Bash(grep -n \"&& }$\\\\|&& }\" src/app/components/StatCards.tsx src/app/components/ExpiryCalendar.tsx src/app/components/DetailPage.tsx)"
+      "Bash(grep -n \"&& }$\\\\|&& }\" src/app/components/StatCards.tsx src/app/components/ExpiryCalendar.tsx src/app/components/DetailPage.tsx)",
+      "WebFetch(domain:gsardine1-lab.github.io)",
+      "Bash(curl -s \"https://gsardine1-lab.github.io/aden-pd/\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://gsardine1-lab.github.io/aden-pd/assets/index-CJdCmYov.js\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://gsardine1-lab.github.io/aden-pd/src/main.tsx\")",
+      "Bash(npx gh-pages *)",
+      "Bash(curl -s -H \"Cache-Control: no-cache\" -H \"Pragma: no-cache\" \"https://gsardine1-lab.github.io/aden-pd/\")",
+      "Bash(curl -s \"https://gsardine1-lab.github.io/aden-pd/index.html\")",
+      "Bash(curl -sI \"https://gsardine1-lab.github.io/aden-pd/\")",
+      "Bash(curl -s -o /dev/null -w \"JS: %{http_code}\\\\n\" \"https://gsardine1-lab.github.io/aden-pd/assets/index-CJdCmYov.js\")",
+      "Bash(curl -s -o /dev/null -w \"CSS: %{http_code}\\\\n\" \"https://gsardine1-lab.github.io/aden-pd/assets/index-Cwh5FNm7.css\")"
     ]
   }
 }
