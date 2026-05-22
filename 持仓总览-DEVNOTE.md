@@ -552,3 +552,13 @@ localStorage (持久化)
     ├── overriddenStatuses → HighFidelityPage + HistoricalPositionsPage
     └── position-table-columns → PositionTable
 ```
+
+---
+
+## 8. 部署
+
+- GitHub Pages 部署源：`gh-pages` 分支
+- 部署命令：`npm run deploy`（自动执行 `npm run build` + `gh-pages -d dist`）
+- 仓库地址：https://github.com/gsardine1-lab/aden-pd
+- 线上地址：https://gsardine1-lab.github.io/aden-pd
+- 每次更新后运行 `npm run deploy` 将最新构建推送到 gh-pages 分支
