@@ -188,17 +188,28 @@ export function HighFidelityPage() {
         <div className="flex items-center justify-between px-6 h-14 bg-white border-b border-[#E8ECF0] flex-shrink-0">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-bold text-[#0D1117]">持仓总览</h1>
-            <Link to="/wireframe" className="text-[10px] font-medium text-[#1677FF] hover:text-white hover:bg-[#1677FF] border border-[#1677FF] rounded-md px-2.5 py-0.5 transition-colors">
-              原型线框图
-            </Link>
+            <div className="flex items-center bg-[#F3F4F6] rounded-lg p-0.5 gap-0.5">
+              <Link
+                to="/wireframe"
+                className="text-[11px] font-medium text-[#6B7280] hover:text-[#0D1117] px-3 py-1 rounded-md transition-all hover:bg-white hover:shadow-sm"
+              >
+                原型线框图
+              </Link>
+              <Link
+                to="/prd"
+                className="text-[11px] font-medium text-[#6B7280] hover:text-[#0D1117] px-3 py-1 rounded-md transition-all hover:bg-white hover:shadow-sm"
+              >
+                PRD
+              </Link>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* 持仓总盈亏 — 点击进历史持仓 */}
+            {/* 已实现损益总额 — 点击进历史持仓 */}
             <Link
               to="/historical"
               className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs h-9 hover:border-[#D1D5DB] hover:bg-[#F9FAFB] transition-all bg-white"
             >
-              <span className="text-[#9CA3AF] font-normal">持仓总盈亏</span>
+              <span className="text-[#9CA3AF] font-normal">已实现损益总额</span>
               <span className="text-[#E5E7EB]">|</span>
               <select value={pnlCurrency} onChange={e => setPnlCurrency(e.target.value as Currency)}
                 onClick={e => e.preventDefault()}
@@ -292,6 +303,7 @@ export function HighFidelityPage() {
 
         <FilterBar filters={filters} onFilterChange={setFilters} onClearFilter={handleClearFilter} />
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div id="stat-cards" data-anchor>
           <StatCards
             filteredPositions={displayPositions}
             isFiltered={filterActive}
@@ -299,12 +311,14 @@ export function HighFidelityPage() {
             onFilter={(partial) => setFilters(prev => ({ ...prev, ...partial }))}
 
           />
-
-          <div className="grid grid-cols-[5fr_1fr] gap-4">
-            <ExpiryCalendar positions={displayPositions} />
-            <DistributionChart onFilter={(min, max) => setFilters(prev => ({ ...prev, returnRateMin: String(min), returnRateMax: String(max) }))} positions={displayPositions} />
           </div>
 
+          <div className="grid grid-cols-[5fr_1fr] gap-4">
+            <div id="expiry-calendar" data-anchor><ExpiryCalendar positions={displayPositions} /></div>
+            <div id="distribution-chart" data-anchor><DistributionChart onFilter={(min, max) => setFilters(prev => ({ ...prev, returnRateMin: String(min), returnRateMax: String(max) }))} positions={displayPositions} /></div>
+          </div>
+
+          <div id="position-table" data-anchor>
           <PositionTable
             filters={filters}
             onFilterChange={setFilters}
@@ -312,6 +326,7 @@ export function HighFidelityPage() {
             onOverrideStatus={updateOverriddenStatuses}
             positions={displayPositions}
           />
+          </div>
 
           <div className="text-[10px] text-[#9CA3AF] text-center pb-2 space-y-0.5">
             <div>所有公开市场价格数据来源于第三方合规数据供应商，平台不对数据的准确性和及时性做保证</div>

@@ -6,8 +6,8 @@ import {
   Flag, Scissors, Gift, AlertTriangle, PauseCircle, Activity
 } from 'lucide-react';
 import {
-  mockPositions, formatAmount, formatNotional, formatRate, getDaysUntilExpiry, Position,
-  getRemainingNotional, addCloseRecord, getCloseRecords, getClosedNotional, CloseRecord
+  mockPositions, formatAmount, formatRate, formatNotional, getDaysUntilExpiry, Position,
+  getRemainingNotional, addCloseRecord, getCloseRecords, CloseRecord
 } from './mockData';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
@@ -17,28 +17,28 @@ import { ScenarioSimulator } from './ScenarioSimulator';
 /* =======================================================================
    关键事件记录 — 股价走势图 + 事件标记
    ======================================================================= */
-type EventType = '建仓' | '除权除息' | '分红调整' | 'ST记录' | '停牌' | '行权';
+type EventType = '建仓' | '除权除息' | '分红调整' | 'ST记录' | '停复牌' | '行权';
 
-// 优先级：数字越小越高
 const EVENT_PRIORITY: Record<EventType, number> = {
-  建仓: 1,
-  停牌: 2,
-  ST记录: 3,
-  除权除息: 4,
-  分红调整: 5,
-  行权: 6,
+  建仓: 1, 停复牌: 2, ST记录: 3, 除权除息: 4, 分红调整: 5, 行权: 6,
 };
 
 interface KeyEvent {
-  id: string;
-  date: string;
-  time?: string;
-  type: EventType;
-  priority: number;
-  title: string;
-  description: string;
-  extra?: string;
-  impact?: 'positive' | 'negative' | 'neutral';
+  id: string; date: string; type: EventType; priority: number; title: string;
+  // 建仓 / 行权共用
+  orderId?: string;
+  // 建仓
+  openPrice?: number; openNotional?: number;
+  // 除权除息
+  dividendPerShare?: number;
+  // 分红调整
+  adjustedOpenPrice?: number; adjustedStrike?: number;  dividendNoAdjust?: boolean;
+  // ST / 停牌
+  actionLabel?: string;
+  // 行权
+  exerciseNotional?: number; exerciseResult?: number;
+  exerciseStatus?: '预估' | '已结算' | '未成交';
+  exercisePrice?: number;
 }
 
 const EVENT_STYLE: Record<string, { icon: React.ElementType; bg: string; color: string }> = {
@@ -46,62 +46,159 @@ const EVENT_STYLE: Record<string, { icon: React.ElementType; bg: string; color: 
   除权除息: { icon: Scissors, bg: '#fff7ed', color: '#c2410c' },
   分红调整: { icon: Gift, bg: '#f0fdf4', color: '#15803d' },
   ST记录: { icon: AlertTriangle, bg: '#fef2f2', color: '#b91c1c' },
-  停牌: { icon: PauseCircle, bg: '#f5f3ff', color: '#6d28d9' },
+  停复牌: { icon: PauseCircle, bg: '#f5f3ff', color: '#6d28d9' },
   行权: { icon: Activity, bg: '#ecfdf5', color: '#065f46' },
 };
 
-// 根据持仓数据生成关键事件
+function formatEventLine(label: string, value: string) {
+  return <span className="text-[10px]"><span className="text-[#9CA3AF]">{label}：</span><span className="text-[#0D1117] font-medium">{value}</span></span>;
+}
+
+function renderEventDetail(evt: KeyEvent): React.ReactNode[] {
+  const lines: React.ReactNode[] = [];
+  const cur = 'CNY';
+  switch (evt.type) {
+    case '建仓':
+      lines.push(formatEventLine('开仓价', `${evt.openPrice?.toLocaleString() ?? '-'} ${cur}`));
+      lines.push(formatEventLine('成交名本', `${formatNotional(evt.openNotional ?? 0, cur)}`));
+      break;
+    case '除权除息':
+      lines.push(formatEventLine('每股分红', `${evt.dividendPerShare?.toFixed(2) ?? '-'} ${cur}`));
+      break;
+    case '分红调整':
+      if (evt.dividendNoAdjust) {
+        lines.push(<span key="na" className="text-[10px] text-[#6B7280]">分红不调整</span>);
+      } else {
+        lines.push(formatEventLine('调整后开仓价', `${evt.adjustedOpenPrice?.toLocaleString() ?? '-'} ${cur}`));
+        lines.push(formatEventLine('调整后执行价', `${evt.adjustedStrike?.toLocaleString() ?? '-'} ${cur}`));
+      }
+      break;
+    case 'ST记录':
+      lines.push(<span key="s" className="text-[10px] font-medium text-[#B91C1C]">{evt.actionLabel}</span>);
+      break;
+    case '停复牌':
+      lines.push(<span key="h" className="text-[10px] font-medium text-[#6D28D9]">{evt.actionLabel}</span>);
+      break;
+    case '行权': {
+      const notional = evt.exerciseNotional ?? 0;
+      lines.push(formatEventLine('行权价', `${evt.exercisePrice?.toLocaleString() ?? '-'} ${cur}`));
+      if (evt.exerciseStatus === '未成交') {
+        lines.push(formatEventLine('行权名本', `${notional}万 ${cur}`));
+        lines.push(<span key="s" className="text-[10px] text-[#9CA3AF]">行权未成交</span>);
+      } else {
+        lines.push(formatEventLine('行权名本', `${notional}万 ${cur}`));
+        lines.push(formatEventLine(
+          evt.exerciseStatus === '已结算' ? '已结算收益' : '预估收益',
+          `${(evt.exerciseResult ?? 0).toLocaleString()} ${cur}`,
+        ));
+      }
+      break;
+    }
+  }
+  if (evt.orderId) {
+    lines.push(
+      <span key="oid" className="text-[10px] text-[#1677FF] hover:underline cursor-pointer inline-flex items-center gap-0.5" title="跳转订单详情">
+        订单号：{evt.orderId}
+      </span>
+    );
+  }
+  return lines;
+}
+
 function generateEvents(position: Position): KeyEvent[] {
-  const events: KeyEvent[] = [];
   const s = new Date(position.startDate);
   const e = new Date(position.expiryDate);
-  const add =(id: string, date: string, type: EventType, title: string, desc: string, extra?: string, impact?: KeyEvent['impact']) => {
-    events.push({ id, date, type, priority: EVENT_PRIORITY[type], title, description: desc, extra, impact });
-  };
+  const events: KeyEvent[] = [];
 
-  // 1. 建仓（最高优先级）
-  add('evt-open', position.startDate, '建仓', '初始建仓',
-    `以执行价 ${position.strikePrice.toLocaleString()} 买入 ${position.underlying} ${position.structure} 看涨期权，名义本金 ${(position.notionalCNY / 10000).toFixed(0)}万`,
-    `开仓价 ${position.openPrice.toLocaleString()}，期权费率 ${((position.optionPremiumCNY / position.notionalCNY) * 100).toFixed(1)}%`);
+  const add = (evt: KeyEvent) => { events.push(evt); };
 
-  // 2. ST 标记
-  if (position.tags.includes('ST')) {
-    const stDate = new Date(s.getTime() + 60 * 86400000);
-    add('evt-st', stDate.toISOString().slice(0, 10), 'ST记录', '标的被 ST 处理',
-      `${position.underlying}因触发风险警示条件，被交易所实施 ST（特别处理）`,
-      '持仓估值需重新评估，关注退市风险', 'negative');
+  // 1. 建仓
+  add({
+    id: 'evt-open', date: position.startDate, type: '建仓', priority: 1,
+    title: '建仓',
+    openPrice: position.openPrice, openNotional: position.openNotionalCNY,
+    ...(position.counterparty === '亚丁' ? { orderId: `ORD-${position.id}-OPEN` } : {}),
+  });
+
+  // 外部录入 / 无行情数据 → 仅保留建仓和行权，跳过行情相关事件
+  const hasMarketData = position.source !== 'external';
+
+  // 2. 除权除息 + 分红调整 — 仅亚丁展示
+  if (hasMarketData && position.counterparty === '亚丁' && position.tradingRules.dividendRule) {
+    const exDate = new Date(s.getTime() + (e.getTime() - s.getTime()) * 0.6);
+    add({
+      id: 'evt-exdiv', date: exDate.toISOString().slice(0, 10), type: '除权除息', priority: 4,
+      title: '除权除息', dividendPerShare: position.currency === 'HKD' ? 0.75 : 0.50,
+    });
+    const hasDeduct = position.tradingRules.dividendRule.includes('提前行权扣分红');
+    const isNoAdj = position.tradingRules.dividendRule.includes('不调整');
+    const divDate = new Date(s.getTime() + (e.getTime() - s.getTime()) * 0.6 + 86400000);
+    if (isNoAdj || hasDeduct) {
+      add({
+        id: 'evt-dividend', date: divDate.toISOString().slice(0, 10), type: '分红调整', priority: 5,
+        title: '分红调整', dividendNoAdjust: true,
+      });
+    } else {
+      add({
+        id: 'evt-dividend', date: divDate.toISOString().slice(0, 10), type: '分红调整', priority: 5,
+        title: '分红调整',
+        adjustedOpenPrice: Math.round(position.openPrice * 0.98),
+        adjustedStrike: Math.round(position.strikePrice * 0.98),
+      });
+    }
   }
 
-  // 3. 停牌
-  if (position.tags.includes('停牌')) {
-    const haltDate = new Date(e.getTime() - 10 * 86400000);
-    add('evt-halt', haltDate.toISOString().slice(0, 10), '停牌', '标的临时停牌',
-      `${position.underlying}因重大事项临时停牌，期间无法交易`,
-      '关注复牌公告及后续安排', 'negative');
+  // 3. ST 记录
+  if (hasMarketData && position.tags.includes('ST')) {
+    const stDate1 = new Date(s.getTime() + 40 * 86400000);
+    const stDate2 = new Date(s.getTime() + 80 * 86400000);
+    add({ id: 'evt-st-1', date: stDate1.toISOString().slice(0, 10), type: 'ST记录', priority: 3, title: 'ST特殊处理', actionLabel: 'ST特殊处理' });
+    add({ id: 'evt-st-2', date: stDate2.toISOString().slice(0, 10), type: 'ST记录', priority: 3, title: '解除ST', actionLabel: '解除ST' });
   }
 
-  // 4. 除权除息
-  if (position.tradingRules.dividendRule) {
-    const exDivDate = new Date(s.getTime() + (e.getTime() - s.getTime()) * 0.65);
-    add('evt-exdiv', exDivDate.toISOString().slice(0, 10), '除权除息', '除权除息调整',
-      '标的实施除权除息，持仓数量及成本价已同步调整');
+  // 4. 停复牌
+  if (hasMarketData && position.tags.includes('停牌')) {
+    const haltDate1 = new Date(e.getTime() - 18 * 86400000);
+    const haltDate2 = new Date(e.getTime() - 5 * 86400000);
+    add({ id: 'evt-halt-1', date: haltDate1.toISOString().slice(0, 10), type: '停复牌', priority: 2, title: '停牌', actionLabel: '停牌' });
+    add({ id: 'evt-halt-2', date: haltDate2.toISOString().slice(0, 10), type: '停复牌', priority: 2, title: '复牌', actionLabel: '复牌' });
   }
 
-  // 5. 分红调整 — 故意与除权除息放在同一天，制造事件重叠
-  if (position.tradingRules.dividendRule) {
-    const exDivDate = new Date(s.getTime() + (e.getTime() - s.getTime()) * 0.65);
-    add('evt-dividend', exDivDate.toISOString().slice(0, 10), '分红调整', '分红派息调整',
-      `${position.underlying}实施分红预案，根据合约条款对持仓进行调整`,
-      '持仓份额按分红比例调整，名本不变');
-  }
-
-  // 6. 行权
-  if (position.status === 'profitable-exercisable' || position.status === 'loss-exercisable') {
-    add('evt-exercise', '2026-05-14', '行权',
-      position.status === 'profitable-exercisable' ? '可行权且盈利' : '可行权但亏损',
-      `市价 ${position.currentPrice.toLocaleString()}，执行价 ${position.strikePrice.toLocaleString()}，处于${position.status === 'profitable-exercisable' ? '深度实值' : '虚值'}可行权状态`,
-      `预估${position.status === 'profitable-exercisable' ? '收益' : '亏损'} ${(Math.abs(position.pnlCNY) / 10000).toFixed(0)}万`,
-      position.status === 'profitable-exercisable' ? 'positive' : 'negative');
+  // 5. 行权 / 平仓结算
+  const isClosedOrExpired = position.status === 'closed' || position.status === 'expired';
+  const isExercisable = position.status === 'profitable-exercisable' || position.status === 'loss-exercisable';
+  if (isClosedOrExpired || isExercisable) {
+    const profit = isClosedOrExpired ? (position.closingPnlCNY ?? position.cumulativePnlCNY) : position.pnlCNY;
+    const settleDate = new Date(e.getTime() - 2 * 86400000).toISOString().slice(0, 10);
+    if (isClosedOrExpired) {
+      // 已平仓/已到期：平仓结算记录（状态=已结算）
+      add({
+        id: 'evt-exercise', date: settleDate, type: '行权', priority: 5,
+        title: profit >= 0 ? '平仓结算（盈利）' : '平仓结算（亏损）',
+        ...(position.counterparty === '亚丁' ? { orderId: `EXE-${position.id}-001` } : {}),
+        exerciseNotional: (position.notionalCNY / 10000),
+        exerciseResult: profit, exerciseStatus: '已结算', exercisePrice: position.strikePrice,
+      });
+    } else if (position.status === 'profitable-exercisable') {
+      add({
+        id: 'evt-exercise', date: '2026-05-14', type: '行权', priority: 5,
+        title: '行权（已结算）', ...(position.counterparty === '亚丁' ? { orderId: `EXE-${position.id}-001` } : {}),
+        exerciseNotional: position.exercisingNotionalCNY ?? Math.round(position.notionalCNY * 0.5),
+        exerciseResult: Math.round(profit * 0.1), exerciseStatus: '已结算', exercisePrice: position.strikePrice,
+      });
+      add({
+        id: 'evt-exercise-2', date: '2026-05-18', type: '行权', priority: 5,
+        title: '行权（预估）', ...(position.counterparty === '亚丁' ? { orderId: `EXE-${position.id}-002` } : {}),
+        exerciseNotional: position.exercisingNotionalCNY ?? Math.round(position.notionalCNY * 0.5),
+        exerciseResult: Math.round(profit * 0.08), exerciseStatus: '预估', exercisePrice: position.strikePrice,
+      });
+    } else {
+      add({
+        id: 'evt-exercise', date: '2026-05-14', type: '行权', priority: 5,
+        title: '行权（未成交）', ...(position.counterparty === '亚丁' ? { orderId: `EXE-${position.id}-001` } : {}),
+        exerciseNotional: (position.notionalCNY / 10000), exerciseStatus: '未成交', exercisePrice: position.strikePrice,
+      });
+    }
   }
 
   return events.sort((a, b) => a.date.localeCompare(b.date));
@@ -152,7 +249,7 @@ function generatePriceData(position: Position, events: KeyEvent[]) {
 }
 
 function KeyEventsTimeline({ position }: { position: Position }) {
-  const ALL_TYPES: EventType[] = ['建仓', '除权除息', '分红调整', 'ST记录', '停牌', '行权'];
+  const ALL_TYPES: EventType[] = ['建仓', '除权除息', '分红调整', 'ST记录', '停复牌', '行权'];
   const [activeFilters, setActiveFilters] = useState<Set<EventType>>(new Set(ALL_TYPES));
   const [selectedEvent, setSelectedEvent] = useState<KeyEvent | null>(null);
 
@@ -169,6 +266,11 @@ function KeyEventsTimeline({ position }: { position: Position }) {
   };
 
   const filteredEvents = events.filter(e => activeFilters.has(e.type));
+
+  // 默认展开第一个事件
+  useEffect(() => {
+    setSelectedEvent(filteredEvents[0] ?? null);
+  }, [events]);
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {
@@ -190,8 +292,7 @@ function KeyEventsTimeline({ position }: { position: Position }) {
                     <span className="text-[10px] text-[#9ca3af]">{evt.date}</span>
                   </div>
                   <div className="text-xs font-semibold text-[#0d1117] mb-0.5">{evt.title}</div>
-                  <div className="text-[10px] text-[#6b7280] leading-relaxed">{evt.description}</div>
-                  {evt.extra && <div className="mt-0.5 text-[10px] text-[#475569]">{evt.extra}</div>}
+                  <div className="space-y-0.5">{renderEventDetail(evt)}</div>
                 </div>
               );
             })}
@@ -339,7 +440,7 @@ function KeyEventsTimeline({ position }: { position: Position }) {
         </div>
 
         {/* 图例 + 事件摘要 */}
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#f3f4f6] overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-[#f3f4f6]">
           {filteredEvents.map(evt => {
             const cfg = EVENT_STYLE[evt.type];
             const isSelected = selectedEvent?.id === evt.id;
@@ -347,14 +448,13 @@ function KeyEventsTimeline({ position }: { position: Position }) {
               <button
                 key={evt.id}
                 onClick={() => setSelectedEvent(isSelected ? null : evt)}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] whitespace-nowrap transition-colors shrink-0 ${
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] transition-colors ${
                   isSelected ? 'bg-[#f3f4f6]' : 'hover:bg-[#f9fafb]'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color }} />
-                <span className="text-[#9ca3af]">{evt.date}</span>
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: cfg.color }} />
+                <span className="text-[#9ca3af]">{evt.date.slice(5)}</span>
                 <span className="font-medium" style={{ color: cfg.color }}>{evt.type}</span>
-                <span className="text-[#6b7280] truncate max-w-[80px]">{evt.title}</span>
               </button>
             );
           })}
@@ -369,8 +469,7 @@ function KeyEventsTimeline({ position }: { position: Position }) {
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-medium" style={{ background: cfg.bg, color: cfg.color }}>{selectedEvent.type}</span>
                 <span className="text-xs font-semibold text-[#0d1117]">{selectedEvent.title}</span>
               </div>
-              <div className="text-[10px] text-[#6b7280] leading-relaxed">{selectedEvent.description}</div>
-              {selectedEvent.extra && <div className="mt-1 text-[10px] text-[#475569]">{selectedEvent.extra}</div>}
+              <div className="space-y-0.5">{renderEventDetail(selectedEvent)}</div>
             </div>
           );
         })()}
@@ -691,7 +790,15 @@ export function DetailPage() {
   // 已平仓 / 已到期 — 历史持仓详情
   // ============================================================
   if (isClosed) {
-    const closeRecords = getCloseRecords()[position.id] || [];
+    const rawCloseRecords = getCloseRecords()[position.id] || [];
+    // mock 数据中已平仓持仓无预置平仓记录，按对手方类型自动生成一条
+    const closeRecords: CloseRecord[] = rawCloseRecords.length > 0
+      ? rawCloseRecords
+      : [{ id: 'auto-close',
+          date: position.counterparty === '亚丁' ? position.expiryDate : new Date(new Date(position.expiryDate).getTime() - 2 * 86400000).toISOString().slice(0, 10),
+          price: position.strikePrice,
+          notionalCNY: position.openNotionalCNY / 10000,
+        }];
     const holdingDays = Math.ceil((new Date(position.expiryDate).getTime() - new Date(position.startDate).getTime()) / 86400000);
     const closeStatusLabel = position.status === 'expired' ? '已到期' : '已平仓';
     const closeStatusColor = position.status === 'expired'
@@ -724,15 +831,13 @@ export function DetailPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-xl font-semibold text-[#0d1117]">{position.underlying}</h1>
                   <span className="text-xs text-[#9ca3af]">{position.code}</span>
-                  <span className="text-[#1677FF] hover:text-[#0E5FCC] cursor-pointer text-xs ml-1">刷新</span>
-                  <span className="text-[10px] text-[#9ca3af]">数据更新 2026-05-14 15:00</span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-medium border"
                     style={{ background: closeStatusColor.bg, color: closeStatusColor.text, borderColor: closeStatusColor.border }}>
                     {closeStatusLabel}
                   </span>
                 </div>
                 <div className="flex items-center gap-4 mt-2 text-xs text-[#9ca3af]">
-                  <span>交易对手 <strong className="text-[#0d1117]">{position.counterpartyFullName}</strong></span>
+                  <span>交易对手 <strong className="text-[#0d1117]">{position.counterparty}</strong></span>
                   <span className="text-[#e8ecf0]">|</span>
                   <span>持有期 <strong className="text-[#0d1117]">{position.startDate} 至 {position.expiryDate}</strong>（{holdingDays} 天）</span>
                   <span className="text-[#e8ecf0]">|</span>
@@ -744,9 +849,9 @@ export function DetailPage() {
             {/* 核心指标 */}
             <div className="flex items-center mt-4 pt-4 border-t border-[#f3f4f6]">
               {[
-                { label: '平仓净收益', value: <>{finalPnl >= 0 ? '+' : ''}{formatAmount(finalPnl, cur)} {cur}</>, icon: TrendingUp, color: '#dc2626', bg: '#fef2f2', pos: finalPnl >= 0 },
-                { label: '开仓名本', value: <>{(position.openNotionalCNY / 10000).toFixed(0)}万 {cur}</>, icon: BarChart2, color: '#1d4ed8', bg: '#eff6ff', pos: null },
-                { label: '总期权费', value: <>{formatAmount(position.optionPremiumCNY, cur)} {cur}</>, icon: Coins, color: '#6d28d9', bg: '#f5f3ff', pos: null },
+                { label: '平仓净收益', value: <>{finalPnl >= 0 ? '+' : ''}{formatAmount(finalPnl, cur, false)} {cur}</>, icon: TrendingUp, color: '#dc2626', bg: '#fef2f2', pos: finalPnl >= 0 },
+                { label: '开仓名本', value: <>{formatNotional(position.openNotionalCNY, cur)}</>, icon: BarChart2, color: '#1d4ed8', bg: '#eff6ff', pos: null },
+                { label: '总期权费', value: <>{formatAmount(position.optionPremiumCNY, cur, false)} {cur}</>, icon: Coins, color: '#6d28d9', bg: '#f5f3ff', pos: null },
               ].map((m, i) => {
                 const Icon = m.icon;
                 return (
@@ -759,7 +864,6 @@ export function DetailPage() {
                       <div className={`font-bold tracking-tight truncate ${m.pos === null ? 'text-[#0d1117]' : m.pos ? 'text-[#dc2626]' : 'text-[#16a34a]'}`} style={{ fontSize: '1.1rem' }}>
                         {m.value}
                       </div>
-                      <div className="text-[11px] mt-0.5 text-[#9ca3af]">{m.sub}</div>
                     </div>
                     {i < 2 && <div className="w-px h-12 bg-[#f3f4f6] ml-auto" />}
                   </div>
@@ -770,6 +874,7 @@ export function DetailPage() {
 
           <div className="flex flex-col gap-5 mt-5">
             {/* ===== 平仓记录 ===== */}
+            <div id="close-records" data-anchor>
             <div className="bg-white rounded-xl border border-[#e8ecf0] overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8ecf0]">
                 <div className="flex items-center gap-2">
@@ -812,8 +917,10 @@ export function DetailPage() {
                 </div>
               )}
             </div>
+            </div>
 
             {/* ===== 持仓概要（只读） ===== */}
+            <div id="position-summary" data-anchor>
             <div className="bg-white rounded-xl border border-[#e8ecf0] overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8ecf0]">
                 <div className="flex items-center gap-2">
@@ -822,16 +929,6 @@ export function DetailPage() {
                 </div>
               </div>
               <div className="p-6 space-y-5">
-                <div className="flex items-center gap-2 flex-wrap pb-4 border-b border-[#f3f4f6]">
-                  <span className="text-sm font-semibold text-[#0d1117] mr-2">{position.underlying}</span>
-                  <span className="text-xs text-[#9ca3af]">{position.code} · {position.market}</span>
-                  <span className="w-px h-4 bg-[#e8ecf0] mx-1" />
-                  <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#eff6ff] text-[#1677ff]">{position.structure}</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] bg-[#f3f4f6] text-[#6b7280]">{position.tradeType}</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] bg-[#f3f4f6] text-[#6b7280]">{position.term}</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] bg-[#f0fdf4] text-[#15803d]">{position.counterparty}</span>
-                </div>
-
                 <div className="grid grid-cols-3 gap-6">
                   <div>
                     <h4 className="text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-3">时间信息</h4>
@@ -842,11 +939,11 @@ export function DetailPage() {
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-3">本金与数量</h4>
+                    <h4 className="text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-3">名本与数量</h4>
                     <div className="space-y-2.5">
-                      <div className="flex justify-between text-xs"><span className="text-[#9ca3af]">开仓名本</span><span className="font-medium text-[#0d1117]">{(position.openNotionalCNY / 10000).toFixed(0)}万</span></div>
-                      <div className="flex justify-between text-xs"><span className="text-[#9ca3af]">期权数量</span><span className="font-medium text-[#0d1117]">{position.optionQty.toLocaleString()}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-[#9ca3af]">开仓名本</span><span className="font-medium text-[#0d1117]">{formatNotional(position.openNotionalCNY, cur)}</span></div>
                       <div className="flex justify-between text-xs"><span className="text-[#9ca3af]">期权费</span><span className="font-medium text-[#0d1117]">{position.optionPremiumCNY.toLocaleString()} {cur}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-[#9ca3af]">期权费率</span><span className="font-medium text-[#0d1117]">{((position.optionPremiumCNY / position.openNotionalCNY) * 100).toFixed(1)}%</span></div>
                     </div>
                   </div>
                   <div>
@@ -854,12 +951,15 @@ export function DetailPage() {
                     <div className="space-y-2.5">
                       <div className="flex justify-between text-xs"><span className="text-[#9ca3af]">开仓价</span><span className="font-medium text-[#0d1117]">{position.openPrice.toFixed(2)} {cur}</span></div>
                       <div className="flex justify-between text-xs"><span className="text-[#9ca3af]">执行价</span><span className="font-medium text-[#1d4ed8]">{position.strikePrice.toFixed(2)} {cur}</span></div>
-                      <div className="flex justify-between text-xs"><span className="text-[#9ca3af]">盈亏平衡点</span><span className="font-medium text-[#0d1117]">{position.breakEvenPrice.toFixed(2)} {cur}</span></div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+            </div>
+
+            {/* ===== 关键事件记录 ===== */}
+            <KeyEventsTimeline position={position} />
 
             {position.notes && (
               <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-lg px-4 py-3 text-xs text-[#92400E]">
@@ -916,7 +1016,7 @@ export function DetailPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-[#9ca3af]">
-                    <span>交易对手 <strong className="text-[#0d1117]">{position.counterpartyFullName}</strong></span>
+                    <span>交易对手 <strong className="text-[#0d1117]">{position.counterparty}</strong></span>
                   </div>
                 </div>
               </div>
@@ -958,9 +1058,9 @@ export function DetailPage() {
           {/* 第二行：核心指标 */}
           <div className="flex items-center mt-4 pt-4 border-t border-[#f3f4f6]">
             {[
-              { label: '预估净收益', value: <>{formatAmount(position.pnlCNY, cur)} {cur}</>, icon: TrendingUp, color: '#dc2626', bg: '#fef2f2', pos: isProfit },
+              { label: '预估净收益', value: <>{formatAmount(position.pnlCNY, cur, false)} {cur}</>, icon: TrendingUp, color: '#dc2626', bg: '#fef2f2', pos: isProfit },
               { label: '持仓估值', value: <>{formatAmount(position.valuationCNY, cur)} {cur}</>, icon: BarChart2, color: '#1d4ed8', bg: '#eff6ff', pos: null },
-              { label: '期权费', value: <>{formatAmount(position.optionPremiumCNY, cur)} {cur}</>, icon: Coins, color: '#6d28d9', bg: '#f5f3ff', pos: null },
+              { label: '期权费', value: <>{formatAmount(position.optionPremiumCNY, cur, false)} {cur}</>, icon: Coins, color: '#6d28d9', bg: '#f5f3ff', pos: null },
             ].map((m, i) => {
               const Icon = m.icon;
               return (
@@ -985,10 +1085,13 @@ export function DetailPage() {
         <div className="flex flex-col gap-5 mt-5">
 
           {/* === 模块一：关键事件记录 === */}
+          <div id="key-events-timeline" data-anchor>
           <KeyEventsTimeline position={position} />
+          </div>
 
-          {/* === 模块二：持仓明细 === */}
-          <div className="bg-white rounded-xl border border-[#e8ecf0] overflow-hidden">
+          {/* === 模块二 + 模块三：持仓明细 + 情景模拟（并排） === */}
+          <div className="grid grid-cols-[3fr_1fr] gap-4">
+          <div id="position-detail-card" data-anchor className="bg-white rounded-xl border border-[#e8ecf0] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8ecf0]">
               <div className="flex items-center gap-2">
                 <div className="w-1 h-5 rounded-full bg-gradient-to-b from-[#1d4ed8] to-[#60a5fa]" />
@@ -999,17 +1102,6 @@ export function DetailPage() {
 
             {/* 卡片式持仓详情 */}
             <div className="p-6 space-y-5">
-              {/* 标签行 */}
-              <div className="flex items-center gap-2 flex-wrap pb-4 border-b border-[#f3f4f6]">
-                <span className="text-sm font-semibold text-[#0d1117] mr-2">{position.underlying}</span>
-                <span className="text-xs text-[#9ca3af]">{position.code} · {position.market}</span>
-                <span className="w-px h-4 bg-[#e8ecf0] mx-1" />
-                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#eff6ff] text-[#1677ff]">{position.structure}</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${position.tradeType === '看涨期权' ? 'bg-[#fef2f2] text-[#dc2626]' : 'bg-[#f0fdf4] text-[#16a34a]'}`}>{position.tradeType}</span>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-[#f3f4f6] text-[#6b7280]">{position.term}</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#f0fdf4] text-[#15803d]">{position.counterparty}</span>
-              </div>
-
               {/* 三列核心信息 */}
               <div className="grid grid-cols-3 gap-6">
                 {/* 列1：时间信息 */}
@@ -1027,7 +1119,6 @@ export function DetailPage() {
                       ) : (
                         <span className={`font-medium ${days >= 0 && days <= 7 ? 'text-[#e53935]' : 'text-[#0d1117]'}`}>
                           {position.expiryDate}
-                          {days >= 0 && days <= 7 && <span className="ml-1 text-[9px]">({days}天)</span>}
                         </span>
                       )}
                     </div>
@@ -1048,25 +1139,25 @@ export function DetailPage() {
                   </div>
                 </div>
 
-                {/* 列2：本金与数量 */}
+                {/* 列2：名本与数量 */}
                 <div>
-                  <h4 className="text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-3">本金与数量</h4>
+                  <h4 className="text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-3">名本与数量</h4>
                   <div className="space-y-2.5">
                     <div className="flex justify-between text-xs">
                       <span className="text-[#9ca3af]">开仓名本</span>
-                      <EditableValue field="openNotionalCNY" value={(position.openNotionalCNY / 10000).toFixed(0)} className="font-medium text-[#0d1117]" suffix="万" />
+                      <EditableValue field="openNotionalCNY" value={(position.openNotionalCNY / 10000).toFixed(0)} className="font-medium text-[#0d1117]" suffix={`万 ${cur}`} />
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-[#9ca3af]">持仓名本</span>
-                      <span className="font-medium text-[#0d1117]">{(getRemainingNotional(position) / 10000).toFixed(0)}万</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-[#9ca3af]">期权数量</span>
-                      <EditableValue field="optionQty" value={position.optionQty.toLocaleString()} className="font-medium text-[#0d1117]" />
+                      <span className="font-medium text-[#0d1117]">{(getRemainingNotional(position) / 10000).toFixed(0)}万 {cur}</span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-[#9ca3af]">期权费</span>
                       <EditableValue field="optionPremiumCNY" value={position.optionPremiumCNY.toLocaleString()} className="font-medium text-[#0d1117]" suffix={` ${cur}`} />
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-[#9ca3af]">期权费率</span>
+                      <span className="font-medium text-[#0d1117]">{((position.optionPremiumCNY / position.notionalCNY) * 100).toFixed(1)}%</span>
                     </div>
                   </div>
                 </div>
@@ -1116,7 +1207,7 @@ export function DetailPage() {
                   type Card = { title: string; color: string; core: string[]; note?: string };
                   const cards: Card[] = [
                     { title: '行权规则', color: '#1d4ed8', core: [position.tradingRules.exerciseRule] },
-                    { title: '到期规则', color: '#6d28d9', core: [position.tradingRules.expiryRule, '截止 13:50 · 结算 最后一小时Twap'] },
+                    { title: '到期行权规则', color: '#6d28d9', core: [position.tradingRules.expiryRule, '截止 13:50 · 结算 最后一小时Twap'] },
                     isNeg ? {
                       title: '协商敲出', color: '#9CA3AF',
                       core: ['日内振幅（涨/跌）≥30%', '涨跌幅≥30%', '一事一议'],
@@ -1169,7 +1260,10 @@ export function DetailPage() {
           </div>
 
           {/* === 模块三：持仓盈亏情景模拟 === */}
+          <div id="scenario-simulator" data-anchor className="flex flex-col">
           <ScenarioSimulator positionId={position.id} />
+          </div>
+          </div>
 
           <div className="text-[10px] text-[#9ca3af] text-center pb-2">
             所有盈亏计算均为预估，实际盈亏以最终行权/平仓时的成交价格和交易规则为准
@@ -1211,7 +1305,7 @@ export function DetailPage() {
                 </div>
                 <div className="text-xs text-[#9CA3AF] mb-4">
                   交易对手：{position.counterparty}
-                  <span className="ml-2 text-[#1677FF]">剩余名本 {(remaining).toFixed(0)}万</span>
+                  <span className="ml-2 text-[#1677FF]">剩余名本 {(remaining).toFixed(0)}万 {cur}</span>
                 </div>
                 <div className="mb-4 space-y-3 p-3 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB]">
                   <div className="text-[10px] font-semibold text-[#374151]">平仓信息录入</div>
@@ -1224,7 +1318,7 @@ export function DetailPage() {
                   <div>
                     <label className="text-[9px] text-[#9CA3AF] mb-0.5 block">本次平仓名本（万）</label>
                     <input type="text" value={closeFormNotional} onChange={e => setCloseFormNotional(e.target.value)}
-                      placeholder={remaining > 0 ? `剩余 ${remaining.toFixed(0)}万，可部分平仓` : '已全部平仓'}
+                      placeholder={remaining > 0 ? `剩余 ${remaining.toFixed(0)}万 ${cur}，可部分平仓` : '已全部平仓'}
                       className="w-full text-xs border border-[#E5E7EB] rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#1677FF] bg-white" />
                   </div>
                   <div>

@@ -116,7 +116,7 @@ export function FilterBar({ filters, onFilterChange, onClearFilter }: FilterBarP
                       </div>
                       <div className="border-t border-[#F3F4F6]" />
                       <FieldSelect label="结构" value={f.structure} onChange={v => setFilter({ structure: v })} options={[{v:'',l:'全部'},...UNIQUE_STRUCTURES.map(s=>({v:s,l:s}))]} />
-                      <FieldSelect label="状态" value={f.status} onChange={v => setFilter({ status: v })} options={[{v:'',l:'全部'},{v:'not-expired',l:'未到期'},{v:'profitable-exercisable',l:'可行权且盈利'},{v:'loss-exercisable',l:'可行权但亏损'}]} />
+                      <FieldSelect label="状态" value={f.status} onChange={v => setFilter({ status: v })} options={[{v:'',l:'全部'},{v:'not-expired',l:'未到可行权日'},{v:'profitable-exercisable',l:'可行权且盈利'},{v:'loss-exercisable',l:'可行权但亏损'}]} />
                       <div className="border-t border-[#F3F4F6]" />
                       <div className="grid grid-cols-2 gap-2">
                         <FieldSelect label="期限" value={(() => {

@@ -135,7 +135,7 @@ export function DrillDownModal({ open, title, positions, onClose, overriddenStat
                           <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-[#F3F4F6] text-[#6B7280] whitespace-nowrap">亏损</span>
                         ) : displayP.status === 'not-expired' ? (
                           displayP.counterparty === '亚丁' ? (
-                            <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-[#F3F4F6] text-[#9CA3AF] whitespace-nowrap" title="持仓尚未进入行权窗口期，暂不可申请行权">未到期</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-[#F3F4F6] text-[#9CA3AF] whitespace-nowrap" title="尚未进入行权窗口期，暂不可申请行权">未到可行权日</span>
                           ) : (
                             <button className="text-[10px] px-2 py-0.5 rounded font-medium whitespace-nowrap bg-[#1677FF] text-white hover:bg-[#0E5FCC] cursor-pointer">手动平仓</button>
                           )

@@ -24,19 +24,19 @@ function ContractCards({ positions }: { positions: Position[] }) {
             className="rounded-md border border-[#F3F4F6] hover:border-[#E5E7EB] hover:shadow-sm bg-white px-2 py-1.5 cursor-pointer transition-all"
             onClick={() => navigate(`/detail/${p.id}`)}
           >
-            <div className="flex items-center justify-between gap-1">
-              <div className="flex items-center gap-1 min-w-0">
-                <span className="text-[10px] font-semibold text-[#0D1117] truncate hover:text-[#1677FF]">{p.underlying}</span>
-                {isExercisable && (
-                  <span className={`text-[7px] px-0.5 py-px rounded font-bold flex-shrink-0 ${p.status === 'profitable-exercisable' ? 'bg-[#E53935] text-white' : 'bg-[#E5E7EB] text-[#6B7280]'}`}>行权</span>
-                )}
-              </div>
-              <div className="flex flex-col items-end flex-shrink-0">
-                <span className="text-[7px] text-[#9CA3AF] leading-tight">预估收益率</span>
-                <span className={`text-[10px] font-bold ${p.returnRate >= 0 ? 'text-[#E53935]' : 'text-[#059669]'}`}>
-                  {formatRate(p.returnRate)}
-                </span>
-              </div>
+            <div className="flex items-center gap-1 min-w-0 mb-0.5">
+              <span className="text-[10px] font-semibold text-[#0D1117] truncate hover:text-[#1677FF]">{p.underlying}</span>
+              {isExercisable && (
+                <span className={`text-[7px] px-0.5 py-px rounded font-bold flex-shrink-0 ${p.status === 'profitable-exercisable' ? 'bg-[#E53935] text-white' : 'bg-[#E5E7EB] text-[#6B7280]'}`}>行权</span>
+              )}
+            </div>
+            <div className="flex items-baseline justify-between mb-0.5">
+              <span className={`text-[11px] font-bold ${p.pnlCNY >= 0 ? 'text-[#E53935]' : 'text-[#059669]'}`}>
+                {p.pnlCNY >= 0 ? '+' : '-'}{Math.abs(p.pnlCNY).toLocaleString()} {p.currency}
+              </span>
+              <span className={`text-[11px] font-bold ${p.returnRate >= 0 ? 'text-[#E53935]' : 'text-[#059669]'}`}>
+                <span className="text-[7px] text-[#9CA3AF] font-normal">预期收益率</span> {formatRate(p.returnRate)}
+              </span>
             </div>
             <div className="text-[8px] text-[#9CA3AF] mb-1">{p.code}</div>
             <div className="flex items-center gap-1 flex-wrap">
@@ -96,7 +96,7 @@ export function ExpiryCalendar({ wireframe = false, positions }: ExpiryCalendarP
     return (
       <div className="bg-white border border-[#CCCCCC] rounded-lg p-4 flex flex-col h-full">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-semibold text-[#444444]">到期合约 · 共 N 笔</span>
+          <span className="text-[11px] font-semibold text-[#444444]">近30日到期日历</span>
           <div className="flex items-center gap-1.5">
             <span className="text-[8px] text-[#AAAAAA]">5/14 → 6/13</span>
             <div className="text-[8px] px-1.5 py-0.5 rounded border border-[#CCCCCC] text-[#999999]">近7天</div>
@@ -126,9 +126,15 @@ export function ExpiryCalendar({ wireframe = false, positions }: ExpiryCalendarP
             <div className="grid grid-cols-3 gap-1">
               {[1,2,3,4,5,6,7,8,9,10,11,12].map(i => (
                 <div key={i} className="rounded-md border border-[#D8D8D8] bg-[#F5F5F5] px-1.5 py-1">
-                  <div className="flex items-center justify-between mb-0.5">
+                  <div className="flex items-center gap-1 mb-0.5">
                     <span className="text-[9px] font-semibold text-[#666666]">标的{i}</span>
-                    <span className="text-[9px] font-semibold text-[#888888]">±0</span>
+                    {i === 1 && <span className="text-[7px] px-0.5 py-px rounded font-bold bg-[#CCCCCC] text-white">行权</span>}
+                  </div>
+                  <div className="flex items-baseline justify-between mb-0.5">
+                    <span className="text-[10px] font-bold text-[#888888]">+150,000 CNY</span>
+                    <span className="text-[10px] font-bold text-[#888888]">
+                      <span className="text-[7px] text-[#AAAAAA] font-normal">预期收益率</span> +12.50%
+                    </span>
                   </div>
                   <div className="text-[7px] text-[#AAAAAA] mb-0.5">代码</div>
                   <div className="flex items-center gap-0.5">
@@ -153,8 +159,7 @@ export function ExpiryCalendar({ wireframe = false, positions }: ExpiryCalendarP
       {/* 头部 */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-[#F3F4F6] flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-[#0D1117]">到期合约</span>
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#FFF7ED] text-[#F97316] font-medium">{totalExpiring} 笔</span>
+          <span className="text-sm font-semibold text-[#0D1117]">近30日到期日历</span>
           <button
             onClick={scrollToTop}
             className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md border border-[#F97316] text-[#F97316] bg-[#FFF7ED] hover:bg-[#FED7AA] transition-colors"

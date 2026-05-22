@@ -2,6 +2,7 @@ import { Routes, Route, Outlet, Link, useLocation } from 'react-router';
 import '../styles/globals.css';
 import { HighFidelityPage } from './components/HighFidelityPage';
 import { WireframePage } from './components/WireframePage';
+import { PrdPage } from './components/PrdPage';
 import { DetailPage } from './components/DetailPage';
 import { ExternalEntryPage } from './components/ExternalEntryPage';
 import { HistoricalPositionsPage } from './components/HistoricalPositionsPage';
@@ -69,6 +70,7 @@ export default function App() {
         </Route>
 
         {/* 高保真区域 */}
+        <Route path="/prd" element={<PrdPage />} />
         <Route path="/detail/:id" element={<DetailPage />} />
         <Route path="/external-entry" element={<ExternalEntryPage />} />
         <Route path="/historical" element={<HistoricalPositionsPage />} />

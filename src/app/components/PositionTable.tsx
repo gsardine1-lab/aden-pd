@@ -21,10 +21,10 @@ interface PositionTableProps {
   positions?: Position[];
 }
 
-type SortField = 'underlying' | 'strategy' | 'structure' | 'status' | 'expiryDate'
+type SortField = 'underlying' | 'structure' | 'status' | 'expiryDate'
   | 'notionalCNY' | 'openPrice' | 'strikePrice' | 'currentPrice'
-  | 'breakEvenPrice' | 'breakevenDiff' | 'optionPremiumCNY'
-  | 'valuationCNY' | 'pnlCNY' | 'counterparty' | 'currency' | 'ruleType';
+  | 'breakEvenPrice' | 'optionPremiumCNY'
+  | 'valuationCNY' | 'pnlCNY' | 'counterparty' | 'currency' | 'ruleType' | 'premiumRate' | 'term';
 
 interface ColumnDef {
   label: string;
@@ -46,6 +46,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   { label: '执行价', sortField: 'strikePrice', sortable: true },
   { label: '当前市价', sortField: 'currentPrice', sortable: true, optional: true },
   { label: '盈亏平衡点', sortField: 'breakEvenPrice', sortable: true, optional: true },
+  { label: '期权费率', sortField: 'premiumRate', sortable: true, optional: true },
   { label: '期权费', sortField: 'optionPremiumCNY', sortable: true, optional: true },
   { label: '持仓估值', sortField: 'valuationCNY', sortable: true, optional: true },
   { label: '持仓预估净收益', sortField: 'pnlCNY', sortable: true },
@@ -89,7 +90,7 @@ function StatusBadge({ position, wireframe, onClose }: { position: Position; wir
     const labels: Record<Position['status'], string> = {
       'profitable-exercisable': '申请行权（红）',
       'loss-exercisable': '申请行权（灰）',
-      'not-expired': '未到期（灰）',
+      'not-expired': '未到可行权日（灰）',
       'expired': '已到期（灰）',
       'closed': '已平仓（灰）',
     };
@@ -113,7 +114,7 @@ function StatusBadge({ position, wireframe, onClose }: { position: Position; wir
   }
   if (status === 'not-expired') {
     if (isAden) {
-      return <span className={`${base} bg-[#F3F4F6] text-[#9CA3AF]`} title="持仓尚未进入行权窗口期，暂不可申请行权">未到期</span>;
+      return <span className={`${base} bg-[#F3F4F6] text-[#9CA3AF]`} title="尚未进入行权窗口期，暂不可申请行权">未到可行权日</span>;
     }
     return (
       <button
@@ -349,8 +350,15 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
         }
       }
       if (sortField === 'ruleType') {
-        const ra = getSpecialRules(a).length > 0 ? 1 : 0;
-        const rb = getSpecialRules(b).length > 0 ? 1 : 0;
+        const ra = getRuleTags(a).length > 0 ? 1 : 0;
+        const rb = getRuleTags(b).length > 0 ? 1 : 0;
+        if (ra < rb) return sortDir === 'asc' ? -1 : 1;
+        if (ra > rb) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      }
+      if (sortField === 'premiumRate') {
+        const ra = a.openNotionalCNY > 0 ? (a.optionPremiumCNY / a.openNotionalCNY) : 0;
+        const rb = b.openNotionalCNY > 0 ? (b.optionPremiumCNY / b.openNotionalCNY) : 0;
         if (ra < rb) return sortDir === 'asc' ? -1 : 1;
         if (ra > rb) return sortDir === 'asc' ? 1 : -1;
         return 0;
@@ -359,9 +367,20 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
       let vb: number | string = b[sortField] as any;
       if (va === undefined) va = sortDir === 'asc' ? Infinity : -Infinity;
       if (vb === undefined) vb = sortDir === 'asc' ? Infinity : -Infinity;
-      if (va < vb) return sortDir === 'asc' ? -1 : 1;
-      if (va > vb) return sortDir === 'asc' ? 1 : -1;
-      return 0;
+      let cmp: number;
+      if (typeof va === 'string' && typeof vb === 'string') {
+        cmp = va.localeCompare(vb, 'zh-Hans-CN');
+      } else if (va < vb) {
+        cmp = -1;
+      } else if (va > vb) {
+        cmp = 1;
+      } else {
+        // tiebreaker: sort by expiryDate then by underlying
+        const ta = a.expiryDate.localeCompare(b.expiryDate);
+        if (ta !== 0) { cmp = ta; }
+        else { cmp = a.underlying.localeCompare(b.underlying, 'zh-Hans-CN'); }
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
     });
   }, [filtered, sortField, sortDir]);
 
@@ -673,6 +692,12 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
                         </div>
                       </td>
                     )}
+                    {/* 期权费率 */}
+                    {!hiddenColumns.includes('期权费率') && (
+                      <td className="px-3 py-2.5 text-[#374151]">
+                        {displayP.openNotionalCNY > 0 ? `${((displayP.optionPremiumCNY / displayP.openNotionalCNY) * 100).toFixed(1)}%` : '-'}
+                      </td>
+                    )}
                     {/* 期权费 */}
                     {!hiddenColumns.includes('期权费') && (
                       <td className="px-3 py-2.5 text-[#374151]">
@@ -758,7 +783,7 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
             </div>
             <div className="text-xs text-[#9CA3AF] mb-4">
               交易对手：{closeTarget.counterparty}
-              <span className="ml-2 text-[#1677FF]">剩余名本 {remaining.toFixed(0)}万</span>
+              <span className="ml-2 text-[#1677FF]">剩余名本 {remaining.toFixed(0)}万 {closeTarget.currency}</span>
             </div>
             <div className="mb-4 space-y-3 p-3 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB]">
               <div className="text-[10px] font-semibold text-[#374151]">平仓信息录入</div>
@@ -771,7 +796,7 @@ export function PositionTable({ wireframe = false, filters, onFilterChange, over
               <div>
                 <label className="text-[9px] text-[#9CA3AF] mb-0.5 block">本次平仓名本（万）</label>
                 <input type="text" value={closeFormNotional} onChange={e => setCloseFormNotional(e.target.value)}
-                  placeholder={remaining > 0 ? `剩余 ${remaining.toFixed(0)}万，可部分平仓` : '已全部平仓'}
+                  placeholder={remaining > 0 ? `剩余 ${remaining.toFixed(0)}万 ${closeTarget.currency}，可部分平仓` : '已全部平仓'}
                   className="w-full text-xs border border-[#E5E7EB] rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#1677FF] bg-white" />
               </div>
               <div>

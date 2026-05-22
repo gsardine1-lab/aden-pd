@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { ArrowLeft, ExternalLink, Search, CalendarDays, TrendingUp, TrendingDown, BarChart2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Search, TrendingUp, TrendingDown, BarChart2 } from 'lucide-react';
 import { mockPositions, convertCurrency, formatAmount, formatNotional, formatRate, getRemainingNotional, getCloseRecords, Currency } from './mockData';
 
 export function HistoricalPositionsPage() {
@@ -71,56 +71,22 @@ export function HistoricalPositionsPage() {
     });
   }, [filtered, sortField, sortDir]);
 
-  // ===== 持仓总盈亏汇总 =====
+  // ===== 已实现损益总额汇总 =====
   const [summaryCurrency, setSummaryCurrency] = useState<Currency>('CNY');
-  const [summaryPeriod, setSummaryPeriod] = useState('all');
-  const [summaryDateFrom, setSummaryDateFrom] = useState('');
-  const [summaryDateTo, setSummaryDateTo] = useState('');
-  const [summaryPickerOpen, setSummaryPickerOpen] = useState(false);
-  const [tmpFrom, setTmpFrom] = useState('');
-  const [tmpTo, setTmpTo] = useState('');
 
   const summaryData = useMemo(() => {
-    const now = new Date('2026-05-14');
-    let from = new Date(0);
-    let to = now;
-    if (summaryPeriod === 'custom') {
-      if (summaryDateFrom) from = new Date(summaryDateFrom);
-      if (summaryDateTo) to = new Date(summaryDateTo);
-    } else if (summaryPeriod === '1m') {
-      from = new Date(now.getTime() - 30 * 86400000);
-    } else if (summaryPeriod === '3m') {
-      from = new Date(now.getTime() - 90 * 86400000);
-    } else if (summaryPeriod === '6m') {
-      from = new Date(now.getTime() - 180 * 86400000);
-    }
-    const all = mockPositions.filter(p => {
-      if (p.status !== 'closed') return false;
-      if (summaryPeriod !== 'all') {
-        const expiry = new Date(p.expiryDate);
-        if (expiry < from || expiry > to) return false;
-      }
-      return true;
-    });
+    const all = mockPositions.filter(p => p.status === 'closed');
     const totalPnl = all.reduce((sum, p) => sum + (p.closingPnlCNY ?? p.cumulativePnlCNY), 0);
     const profitCount = all.filter(p => (p.closingPnlCNY ?? p.cumulativePnlCNY) > 0).length;
     const lossCount = all.filter(p => (p.closingPnlCNY ?? p.cumulativePnlCNY) < 0).length;
     const flatCount = all.length - profitCount - lossCount;
     const totalNotional = all.reduce((sum, p) => sum + p.openNotionalCNY, 0);
+    const totalPremium = all.reduce((sum, p) => sum + p.optionPremiumCNY, 0);
     const avgReturn = all.length > 0
       ? all.reduce((sum, p) => sum + ((p.closingPnlCNY ?? p.cumulativePnlCNY) / p.openNotionalCNY), 0) / all.length
       : 0;
-    return { totalPnl, count: all.length, profitCount, lossCount, flatCount, totalNotional, avgReturn };
-  }, [summaryPeriod, summaryDateFrom, summaryDateTo]);
-
-  const summaryDateLabel = useMemo(() => {
-    const now = new Date('2026-05-14');
-    if (summaryPeriod === 'custom') return `${summaryDateFrom || '...'} 至 ${summaryDateTo || '...'}`;
-    const months = summaryPeriod === '1m' ? 1 : summaryPeriod === '3m' ? 3 : summaryPeriod === '6m' ? 6 : 0;
-    if (!months) return '';
-    const from = new Date(now); from.setMonth(from.getMonth() - months);
-    return `${from.toISOString().slice(0, 10)} 至 ${now.toISOString().slice(0, 10)}`;
-  }, [summaryPeriod, summaryDateFrom, summaryDateTo]);
+    return { totalPnl, count: all.length, profitCount, lossCount, flatCount, totalNotional, totalPremium, avgReturn };
+  }, []);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -165,79 +131,42 @@ export function HistoricalPositionsPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {/* ===== 持仓总盈亏汇总卡片 ===== */}
-          <div className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm">
+          {/* ===== 已实现损益总额汇总卡片 ===== */}
+          <div id="historical-summary" data-anchor className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm">
             <div className="flex items-center justify-between px-5 py-3 border-b border-[#F3F4F6]">
-              <div className="flex items-center gap-2">
-                <BarChart2 size={16} className="text-[#1677FF]" />
-                <span className="text-sm font-semibold text-[#0D1117]">持仓总盈亏</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <select value={summaryCurrency} onChange={e => setSummaryCurrency(e.target.value as Currency)}
-                  className="text-[10px] border border-[#E5E7EB] rounded px-2 py-1 focus:outline-none text-[#6B7280]">
-                  <option value="CNY">CNY</option>
-                  <option value="USD">USD</option>
-                  <option value="HKD">HKD</option>
-                </select>
-                <button onClick={() => setSummaryPeriod('all')}
-                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${summaryPeriod === 'all' ? 'text-[#1677FF] font-medium bg-[#EFF6FF]' : 'text-[#9CA3AF] hover:text-[#6B7280]'}`}>全部</button>
-                {['1m', '3m', '6m'].map(p => (
-                  <button key={p} onClick={() => setSummaryPeriod(summaryPeriod === p ? 'all' : p)}
-                    className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${summaryPeriod === p ? 'text-[#1677FF] font-medium bg-[#EFF6FF]' : 'text-[#9CA3AF] hover:text-[#6B7280]'}`}>{p === '1m' ? '1月' : p === '3m' ? '3月' : '6月'}</button>
-                ))}
-                <div className="relative flex items-center">
-                  <button onClick={() => { setSummaryPickerOpen(!summaryPickerOpen); setTmpFrom(summaryDateFrom); setTmpTo(summaryDateTo); }}
-                    className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${summaryPeriod !== 'all' ? 'text-[#6B7280]' : 'text-[#9CA3AF] hover:text-[#6B7280]'}`}>
-                    <CalendarDays size={13} />
-                    {summaryPeriod !== 'all' && <span>{summaryDateLabel}</span>}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center bg-[#F3F4F6] rounded-lg p-0.5">
+                {(['CNY', 'USD', 'HKD'] as Currency[]).map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setSummaryCurrency(c)}
+                    className={`text-[11px] px-3 py-1 rounded-md font-medium transition-all ${
+                      summaryCurrency === c
+                        ? 'bg-white text-[#0D1117] shadow-sm'
+                        : 'text-[#9CA3AF] hover:text-[#6B7280]'
+                    }`}
+                  >
+                    {c}
                   </button>
-                  {summaryPeriod !== 'all' && (
-                    <button onClick={() => { setSummaryPeriod('all'); setSummaryDateFrom(''); setSummaryDateTo(''); }}
-                      className="text-[10px] text-[#9CA3AF] hover:text-[#6B7280] px-0.5">×</button>
-                  )}
-                  {summaryPickerOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setSummaryPickerOpen(false)} />
-                      <div className="absolute top-full mt-1 right-0 bg-white rounded-lg shadow-xl border border-[#E8ECF0] p-3 z-20 w-64">
-                        <div className="text-[10px] font-medium text-[#6B7280] mb-2">自定义时间区间</div>
-                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1 mb-2">
-                          <input type="date" value={tmpFrom} max={tmpTo || undefined} onChange={e => setTmpFrom(e.target.value)}
-                            onClick={e => { e.preventDefault(); (e.target as HTMLInputElement).showPicker?.(); }}
-                            className="text-[10px] border border-[#E5E7EB] rounded px-1.5 py-1 focus:outline-none focus:border-[#1677FF] cursor-pointer" />
-                          <span className="text-[10px] text-[#9CA3AF]">至</span>
-                          <input type="date" value={tmpTo} min={tmpFrom || undefined} onChange={e => setTmpTo(e.target.value)}
-                            onClick={e => { e.preventDefault(); (e.target as HTMLInputElement).showPicker?.(); }}
-                            className="text-[10px] border border-[#E5E7EB] rounded px-1.5 py-1 focus:outline-none focus:border-[#1677FF] cursor-pointer" />
-                        </div>
-                        {tmpFrom && tmpTo && tmpTo < tmpFrom && (
-                          <div className="text-[9px] text-[#E53935] mb-2">结束日期不能早于开始日期</div>
-                        )}
-                        <div className="flex gap-2">
-                          <button disabled={!!(tmpFrom && tmpTo && tmpTo < tmpFrom)}
-                            onClick={() => { setSummaryDateFrom(tmpFrom); setSummaryDateTo(tmpTo); setSummaryPeriod(tmpFrom || tmpTo ? 'custom' : 'all'); setSummaryPickerOpen(false); }}
-                            className="flex-1 text-[10px] py-1 rounded bg-[#1677FF] text-white hover:bg-[#0E5FCC] disabled:bg-[#B0D0FF] transition-colors">确定</button>
-                          <button onClick={() => setSummaryPickerOpen(false)}
-                            className="flex-1 text-[10px] py-1 rounded border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F9FAFB] transition-colors">取消</button>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                ))}
                 </div>
+                <BarChart2 size={16} className="text-[#1677FF]" />
+                <span className="text-sm font-semibold text-[#0D1117]">已实现损益总额</span>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-4 px-5 py-4">
+            <div className="grid grid-cols-5 gap-4 px-5 py-4">
               <div>
                 <div className="text-[10px] text-[#9CA3AF] mb-1">总盈亏</div>
-                <div className={`text-xl font-bold ${summaryData.totalPnl >= 0 ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
+                <div className={`text-lg font-bold ${summaryData.totalPnl >= 0 ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
                   {summaryData.totalPnl >= 0 ? '+' : ''}{formatAmount(convertCurrency(summaryData.totalPnl, summaryCurrency), summaryCurrency, false)}
                 </div>
                 <div className="text-[10px] text-[#9CA3AF] mt-0.5">
-                  {summaryCurrency} · {summaryData.count} 笔
+                  {summaryData.count} 笔
                 </div>
               </div>
               <div>
                 <div className="text-[10px] text-[#9CA3AF] mb-1">盈利 / 亏损</div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1">
                     <TrendingUp size={14} className="text-[#DC2626]" />
                     <span className="text-sm font-semibold text-[#DC2626]">{summaryData.profitCount}</span>
@@ -258,7 +187,12 @@ export function HistoricalPositionsPage() {
                 <div className="text-sm font-semibold text-[#0D1117]">
                   {formatNotional(summaryData.totalNotional, summaryCurrency)}
                 </div>
-                <div className="text-[10px] text-[#9CA3AF] mt-0.5">{summaryCurrency}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-[#9CA3AF] mb-1">总期权费</div>
+                <div className="text-sm font-semibold text-[#6B7280]">
+                  {formatAmount(convertCurrency(summaryData.totalPremium, summaryCurrency), summaryCurrency, false)}
+                </div>
               </div>
               <div>
                 <div className="text-[10px] text-[#9CA3AF] mb-1">平均收益率</div>
@@ -269,8 +203,7 @@ export function HistoricalPositionsPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm">
-            {/* 表头 */}
+          <div id="historical-table" data-anchor className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm">
             <div className="flex items-center justify-between px-5 py-3 border-b border-[#F3F4F6]">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-semibold text-[#0D1117]">共 {filtered.length} 条</span>
@@ -318,7 +251,7 @@ export function HistoricalPositionsPage() {
                     <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap cursor-pointer hover:bg-[#F3F4F6] select-none" onClick={() => handleSort('structure')}>结构{renderSortArrow('structure')}</th>
                     <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap cursor-pointer hover:bg-[#F3F4F6] select-none" onClick={() => handleSort('status')}>状态{renderSortArrow('status')}</th>
                     <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap cursor-pointer hover:bg-[#F3F4F6] select-none" onClick={() => handleSort('startDate')}>开仓日 / 到期日{renderSortArrow('startDate')}</th>
-                    <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap cursor-pointer hover:bg-[#F3F4F6] select-none" onClick={() => handleSort('notionalCNY')}>名义本金{renderSortArrow('notionalCNY')}</th>
+                    <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap cursor-pointer hover:bg-[#F3F4F6] select-none" onClick={() => handleSort('notionalCNY')}>名本{renderSortArrow('notionalCNY')}</th>
                     <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap cursor-pointer hover:bg-[#F3F4F6] select-none" onClick={() => handleSort('closingPnlCNY')}>平仓收益{renderSortArrow('closingPnlCNY')}</th>
                     <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap cursor-pointer hover:bg-[#F3F4F6] select-none" onClick={() => handleSort('cumulativePnlCNY')}>累计净收益{renderSortArrow('cumulativePnlCNY')}</th>
                     <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap">操作</th>
@@ -371,14 +304,14 @@ export function HistoricalPositionsPage() {
                             (p.closingPnlCNY ?? 0) >= 0 ? 'text-[#E53935]' : 'text-[#059669]'
                           }`}>
                             {p.closingPnlCNY !== undefined
-                              ? formatAmount(convertCurrency(p.closingPnlCNY, cur), cur)
+                              ? formatAmount(convertCurrency(p.closingPnlCNY, cur), cur, false)
                               : <span className="text-[#9CA3AF]">-</span>
                             }
                           </td>
                           <td className={`px-3 py-3 text-right whitespace-nowrap font-medium ${
                             p.cumulativePnlCNY >= 0 ? 'text-[#E53935]' : 'text-[#059669]'
                           }`}>
-                            {p.cumulativePnlCNY >= 0 ? '+' : ''}{formatAmount(convertCurrency(p.cumulativePnlCNY, cur), cur)}
+                            {p.cumulativePnlCNY >= 0 ? '+' : ''}{formatAmount(convertCurrency(p.cumulativePnlCNY, cur), cur, false)}
                           </td>
                           <td className="px-3 py-3 text-center">
                             <Link

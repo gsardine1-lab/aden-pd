@@ -1,15 +1,24 @@
 // ============================================================
-// 灰度线框通用样式（较深，便于阅读）
+// 子页面 — 原型线框图
+// 持仓详情 / 录入外部持仓 / 批量导入 / 历史持仓
+// 展示完整页面结构、交互层级与状态变化，供 UI 设计师参考
+// 所有颜色为占位灰度，设计师自行定义色值规范
 // ============================================================
+
 const BORDER = 'border-[#B0B0B0]';
 const PAGE_BG = 'bg-[#F0F0F0]';
-const CARD_BG = 'bg-white';
-const ROW_BG = 'bg-[#ECECEC]';
 const DIVIDER = 'border-[#D0D0D0]';
 const BLOCK = 'bg-[#D8D8D8]';
-const BLOCK_DARK = 'bg-[#C0C0C0]';
+const BLOCK_D = 'bg-[#C0C0C0]';
 const INPUT_BG = 'bg-[#EAEAEA]';
 const BTN_FILL = 'bg-[#B0B0B0]';
+const TXT = 'text-[#666]';
+const TXT_L = 'text-[#888]';
+const TXT_M = 'text-[#555]';
+
+function Block({ w, h = '3' }: { w: string; h?: string }) {
+  return <div className={`h-${h} rounded ${BLOCK}`} style={{ width: w }} />;
+}
 
 // ============================================================
 // 持仓详情 线框图
@@ -19,211 +28,349 @@ export function WireframeDetailPage() {
     <div className={`flex h-screen ${PAGE_BG} overflow-hidden`} style={{ minWidth: '1200px' }}>
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className={`flex items-center px-6 h-14 bg-white border-b ${BORDER} flex-shrink-0`}>
-          <span className="text-sm text-[#666666]">← 返回持仓总览</span>
+          <span className="text-sm text-[#666]">← 返回持仓总览</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className={`bg-white border ${BORDER} rounded-lg max-w-5xl mx-auto`}>
-            <div className="px-5 py-4 border-b ${DIVIDER}">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-base font-bold text-[#222222]">标的名称</span>
-                <span className="text-xs text-[#666666] font-mono">代码</span>
-                <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] bg-[#EAEAEA] text-[#666666]">状态标签</span>
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+          {/* ========== 开仓视图 ========== */}
+          <div className="max-w-5xl mx-auto">
+            <div className="text-[10px] font-semibold text-[#555] mb-2 px-1">场景一：未平仓持仓详情</div>
+
+            {/* 头部 */}
+            <div className={`bg-white border ${BORDER} rounded-lg`}>
+              <div className={`px-5 py-4 border-b ${DIVIDER}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-base font-bold text-[#222]">标的名称</span>
+                  <span className="text-xs text-[#888] font-mono">代码</span>
+                  <span className="text-[#1677FF] hover:underline cursor-pointer text-xs">刷新</span>
+                  <span className="text-[10px] text-[#999]">数据更新 2026-05-14 15:00</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] bg-[#EAEAEA] text-[#666]">状态标签</span>
+                </div>
+                <div className="flex items-center gap-6 mt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-[#C62828]">¥1,832.50</span>
+                    <span className="text-sm text-[#C62828]">+13.12%</span>
+                  </div>
+                  <span className="text-xs text-[#999]">交易对手 <strong className="text-[#222]">亚丁</strong></span>
+                </div>
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#777]">100%Call</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#777]">看涨期权</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#777]">6个月</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#777]">亚丁</span>
+                </div>
+                {/* 核心指标 */}
+                <div className="flex items-center mt-4 pt-4 border-t border-[#F0F0F0] gap-4">
+                  {['预估净收益：+¥150万 CNY', '持仓估值：¥210万 CNY', '期权费：¥60万 CNY'].map((m, i) => (
+                    <div key={i} className="flex-1 flex items-center gap-2">
+                      <div className="w-8 h-8 rounded bg-[#E0E0E0]" />
+                      <div><div className="text-[10px] text-[#999]">{m.split('：')[0]}</div><div className="font-bold text-[#222] text-sm">{m.split('：')[1]}</div></div>
+                      {i < 2 && <div className="w-px h-10 bg-[#E0E0E0] ml-auto" />}
+                    </div>
+                  ))}
+                </div>
+                {/* 备注 + 标签 */}
+                <div className="mt-3 pt-3 border-t border-[#F0F0F0] flex items-center gap-4 text-[10px]">
+                  <span className="text-[#999]">备注: —</span>
+                  <span className="text-[#999]">标签:</span>
+                  {['停牌', 'ST'].map(t => (
+                    <span key={t} className="text-[9px] px-1.5 py-0.5 rounded border border-[#B0B0B0] bg-[#EAEAEA] text-[#666]">{t} ×</span>
+                  ))}
+                  <span className="text-[9px] text-[#1677FF]">+ 新建</span>
+                  <div className="ml-auto flex gap-2">
+                    <div className="px-3 py-1 rounded border border-[#B0B0B0] text-[10px] text-[#666] bg-[#EAEAEA]">申请行权</div>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#666666]">结构</span>
-                <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#666666]">看涨期权</span>
-                <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#666666]">期限</span>
-                <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#666666]">交易对手</span>
+
+              {/* 关键事件记录 */}
+              <div className={`px-5 py-4 border-b ${DIVIDER}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-4 rounded bg-[#C0C0C0]" />
+                  <span className="text-xs font-semibold text-[#555]">关键事件记录</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F0F0F0] text-[#888]">N 条</span>
+                </div>
+                <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                  {['建仓', '除权除息', '分红调整', 'ST记录', '停复牌', '行权'].map(t => (
+                    <span key={t} className="text-[9px] px-1.5 py-0.5 rounded border border-[#C0C0C0] bg-[#EAEAEA] text-[#777]">{t}</span>
+                  ))}
+                </div>
+                <div className="h-48 bg-[#ECECEC] rounded flex items-center justify-center">
+                  <span className="text-[10px] text-[#999]">股价走势图 + 事件标记线（6 种事件类型 · 无"异动"）</span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {['05/15 建仓', '03/15 除权除息', '03/16 分红调整', '04/20 ST', '05/10 停复牌', '05/14 行权'].map(e => (
+                    <div key={e} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] bg-[#F0F0F0] text-[#888] border border-[#E0E0E0]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#C0C0C0]" />{e}
+                    </div>
+                  ))}
+                </div>
+                {/* 选中事件详情（默认展开第一条） */}
+                <div className="mt-3 p-3 rounded-lg border border-[#D0D0D0] bg-[#F5F5F5]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#E0E0E0] text-[#666]">建仓</span>
+                    <span className="text-xs font-semibold text-[#444]">建仓</span>
+                  </div>
+                  <div className="text-[10px] text-[#888] space-y-0.5">
+                    <div>开仓价：1,620 CNY</div>
+                    <div>成交名本：1,200万 CNY</div>
+                    <div className="text-[#1677FF] hover:underline cursor-pointer">订单号：ORD-1-OPEN</div>
+                  </div>
+                  <div className="mt-1 text-[8px] text-[#AAA]">↑ 默认展开第一个事件 · 点击图例可切换 · 非亚丁不含订单号</div>
+                </div>
+              </div>
+
+              {/* 持仓明细 + 情景模拟（并排） */}
+              <div className="flex gap-4 px-5 py-4 border-b border-[#D0D0D0]">
+                {/* 左：持仓明细 */}
+                <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-4 rounded bg-[#C0C0C0]" />
+                  <span className="text-xs font-semibold text-[#555]">持仓明细</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F0F0F0] text-[#888]">1 笔</span>
+                </div>
+                <div className="grid grid-cols-3 gap-6">
+                  <div>
+                    <div className={`text-[9px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>时间信息</div>
+                    <div className="space-y-1.5 mt-2">
+                      {['开仓日', '到期日', '最早行权日', '剩余自然日', '剩余交易日'].map(l => (
+                        <div key={l} className="flex justify-between text-[10px]"><span className="text-[#999]">{l}</span><span className="text-[#555]">—</span></div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className={`text-[9px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>名本与数量</div>
+                    <div className="space-y-1.5 mt-2">
+                      {['开仓名本', '持仓名本', '期权费', '期权费率'].map(l => (
+                        <div key={l} className="flex justify-between text-[10px]"><span className="text-[#999]">{l}</span><span className="text-[#555]">—</span></div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className={`text-[9px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>价格信息</div>
+                    <div className="space-y-1.5 mt-2">
+                      {['开仓价', '执行价', '当前市价', '当前涨幅', '盈亏平衡点', '距平衡点'].map(l => (
+                        <div key={l} className="flex justify-between text-[10px]"><span className="text-[#999]">{l}</span><span className="text-[#555]">—</span></div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {/* 交易规则（仅亚丁） */}
+                <div className="mt-4 pt-4 border-t border-[#F0F0F0]">
+                  <div className="text-[9px] font-semibold text-[#999] mb-2">交易规则（仅亚丁展示）</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['行权规则', '到期行权规则', '敲出规则（强制/协商）', '分红规则（调整/不调整/扣分红）'].map(r => (
+                      <div key={r} className="rounded border border-[#D0D0D0] bg-[#F5F5F5] px-3 py-2 text-[9px] text-[#888]">{r}</div>
+                    ))}
+                  </div>
+                </div>
+                </div>
+
+                {/* 右：情景模拟 */}
+                <div className="w-1/4 flex-shrink-0">
+                <div className="text-xs font-semibold text-[#555] mb-3">持仓盈亏情景模拟</div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[10px] text-[#999]">标的价格变化</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#F0F0F0] text-[#777]">0%</span>
+                </div>
+                <div className="h-2 bg-gradient-to-r from-[#059669] via-[#D0D0D0] to-[#C62828] rounded-full" />
+                <div className="flex justify-between text-[8px] text-[#BBB] mt-1"><span>-100%</span><span>当前</span><span>+100%</span></div>
+                <div className="mt-3 grid grid-cols-5 gap-1">
+                  {['+10%', '+5%', '当前', '-5%', '-10%'].map(l => (
+                    <div key={l} className="text-center rounded bg-[#F0F0F0] py-1.5 text-[9px] text-[#888]">{l}</div>
+                  ))}
+                </div>
+                <div className="text-[8px] text-[#BBB] mt-2 text-center">模拟结果仅供参考</div>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 divide-x ${DIVIDER}">
-              <div className="p-4 space-y-4">
-                <div>
-                  <div className="text-[10px] font-semibold text-[#777777] uppercase tracking-wider border-b ${DIVIDER} pb-1">基本信息</div>
-                  <div className="space-y-2 mt-2">
-                    {['标的名称', '标的代码', '结构', '交易类型', '交易对手', '策略', '操作方向', '币种'].map(label => (
-                      <div key={label} className="flex justify-between text-xs">
-                        <span className="text-[#777777]">{label}</span>
-                        <span className="text-[#444444]">—</span>
-                      </div>
-                    ))}
-                  </div>
+            {/* 手动平仓弹窗（非亚丁） */}
+            <div className="mt-3 p-3 border border-dashed border-[#B0B0B0] rounded bg-white">
+              <div className="text-[9px] font-semibold text-[#666] mb-2">↓ 弹窗：手动平仓（非亚丁持仓触发）</div>
+              <div className="border border-[#B0B0B0] rounded-lg p-4 w-80 mx-auto bg-[#F8F8F8]">
+                <div className="text-sm font-semibold text-[#555] mb-1">手动平仓</div>
+                <div className="text-xs text-[#888]">标的名称（代码）· 剩余名本 X 万</div>
+                <div className="space-y-2 mt-3">
+                  {['平仓价格', '本次平仓名本（万）', '平仓日期'].map(f => (
+                    <div key={f} className="h-7 border border-[#B0B0B0] rounded bg-[#EAEAEA] flex items-center px-2 text-[9px] text-[#999]">{f}</div>
+                  ))}
                 </div>
-                <div>
-                  <div className="text-[10px] font-semibold text-[#777777] uppercase tracking-wider border-b ${DIVIDER} pb-1">时间信息</div>
-                  <div className="space-y-2 mt-2">
-                    {['期限', '开仓日', '到期日', '最早行权日', '剩余天数'].map(label => (
-                      <div key={label} className="flex justify-between text-xs">
-                        <span className="text-[#777777]">{label}</span>
-                        <span className="text-[#444444]">—</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 space-y-4">
-                <div>
-                  <div className="text-[10px] font-semibold text-[#777777] uppercase tracking-wider border-b ${DIVIDER} pb-1">规模与费用</div>
-                  <div className="space-y-2 mt-2">
-                    {['开仓名本', '持仓名本', '行权中名本', '期权数量', '期权费率', '期权费', '持仓估值'].map(label => (
-                      <div key={label} className="flex justify-between text-xs">
-                        <span className="text-[#777777]">{label}</span>
-                        <span className="text-[#444444]">—</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[10px] font-semibold text-[#777777] uppercase tracking-wider border-b ${DIVIDER} pb-1">价格信息</div>
-                  <div className="space-y-2 mt-2">
-                    {['开仓价', '执行价', '当前市价', '盈亏平衡点', '市价偏离度', '盈亏点偏离度'].map(label => (
-                      <div key={label} className="flex justify-between text-xs">
-                        <span className="text-[#777777]">{label}</span>
-                        <span className="text-[#444444]">—</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 space-y-4">
-                <div>
-                  <div className="text-[10px] font-semibold text-[#777777] uppercase tracking-wider border-b ${DIVIDER} pb-1">预估盈亏</div>
-                  <div className="space-y-2 mt-2">
-                    {['预估净收益', '收益率', '累计净收益'].map(label => (
-                      <div key={label} className="flex justify-between text-xs">
-                        <span className="text-[#777777]">{label}</span>
-                        <span className="text-[#444444]">—</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[10px] font-semibold text-[#777777] uppercase tracking-wider border-b ${DIVIDER} pb-1">交易规则</div>
-                  <div className="space-y-1.5 mt-2">
-                    {['行权规则', '到期行权', '敲出规则', '分红处理'].map(label => (
-                      <div key={label} className="flex justify-between text-xs">
-                        <span className="text-[#777777]">{label}</span>
-                        <span className="text-[#444444]">—</span>
-                      </div>
-                    ))}
-                  </div>
+                <div className="flex gap-2 mt-3">
+                  <div className="flex-1 h-7 border border-[#B0B0B0] rounded text-[9px] text-[#777] text-center leading-7">取消</div>
+                  <div className="flex-1 h-7 bg-[#B0B0B0] rounded text-[9px] text-[#666] text-center leading-7">确认平仓</div>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* 底部信息栏 */}
-            <div className="px-5 py-3 border-t ${DIVIDER} space-y-2">
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="h-8 px-4 border border-[#B0B0B0] rounded flex items-center text-xs text-[#666666] bg-[#EAEAEA]">手动平仓</div>
-                <span className="text-[10px] text-[#888888]">│ 备注: —</span>
-                <span className="text-[10px] text-[#888888]">│ 交易确认书: —</span>
-                <span className="text-[10px] text-[#888888]">│ 交易规则备注: —</span>
-              </div>
-              {/* 标签区 */}
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-[#888888]">标签:</span>
-                {['停牌', 'ST'].map(t => (
-                  <span key={t} className="text-[9px] px-1.5 py-0.5 rounded border border-[#B0B0B0] bg-[#EAEAEA] text-[#666666]">{t} ×</span>
-                ))}
-                <span className="text-[9px] px-1.5 py-0.5 rounded border border-[#B0B0B0] text-[#B0B0B0]">+ 新建</span>
-              </div>
-            </div>
+          {/* ========== 平仓/到期视图 ========== */}
+          <div className="max-w-5xl mx-auto">
+            <div className="text-[10px] font-semibold text-[#555] mb-2 px-1">场景二：已平仓 / 已到期持仓详情</div>
 
-            {/* 平仓记录区（多次部分平仓时展示） */}
-            <div className="px-5 py-3 border-t ${DIVIDER}">
-              <div className="text-[10px] font-semibold text-[#666666] mb-2">平仓记录（支持多次部分平仓）</div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-4 text-[10px]">
-                  <span className="text-[#888888]">2026-05-20</span>
-                  <span className="text-[#888888]">平仓价 1,850</span>
-                  <span className="text-[#888888]">本次 200 万</span>
-                  <span className="text-[#666666]">剩余 300 万</span>
+            <div className={`bg-white border ${BORDER} rounded-lg`}>
+              <div className={`px-5 py-4 border-b ${DIVIDER}`}>
+                <div className="flex items-center gap-2 text-xs text-[#999]">
+                  <span className="hover:text-[#1677FF] cursor-pointer">持仓管理</span><span>/</span>
+                  <span className="hover:text-[#1677FF] cursor-pointer">历史持仓</span><span>/</span><span>持仓详情</span>
+                </div>
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  <span className="text-base font-bold text-[#222]">标的名称</span>
+                  <span className="text-xs text-[#999] font-mono">代码</span>
+                  {/* 无"刷新"按钮、无"数据更新"时间戳 */}
+                  <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] bg-[#F3F4F6] text-[#666]">已平仓 / 已到期</span>
+                </div>
+                <div className="flex items-center gap-4 mt-2 text-xs text-[#999]">
+                  <span>交易对手 <strong className="text-[#222]">XXX</strong></span>
+                  <span>|</span>
+                  <span>持有期 YYYY-MM-DD 至 YYYY-MM-DD（N 天）</span>
+                  <span>|</span>
+                  <span>结构 · 看涨期权</span>
+                </div>
+                {/* 核心指标 */}
+                <div className="flex items-center mt-4 pt-4 border-t border-[#F0F0F0] gap-4">
+                  {['平仓净收益', '开仓名本', '总期权费'].map((m, i) => (
+                    <div key={i} className="flex-1 flex items-center gap-2">
+                      <div className="w-8 h-8 rounded bg-[#E0E0E0]" />
+                      <div><div className="text-[10px] text-[#999]">{m}</div><div className="font-bold text-[#222] text-sm">—</div></div>
+                      {i < 2 && <div className="w-px h-10 bg-[#E0E0E0] ml-auto" />}
+                    </div>
+                  ))}
+                </div>
+                <div className="text-[8px] text-[#BBB] mt-1">↑ 已去掉"预估"前缀（平仓后收益已确定）· 已去掉"刷新"和行情时间</div>
+              </div>
+
+              {/* 平仓记录 */}
+              <div className={`px-5 py-4 border-b ${DIVIDER}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-4 rounded bg-[#C0C0C0]" />
+                  <span className="text-xs font-semibold text-[#555]">平仓记录</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F0F0F0] text-[#888]">N 笔</span>
+                </div>
+                <div className="text-[9px] text-[#999]">
+                  表格列：# · 平仓日期 · 平仓价格 · 本次名本（万）· 累计名本（万）
                 </div>
               </div>
-              <div className="text-[8px] text-[#888888] mt-1">完全平仓后状态自动变为"已平仓"</div>
-            </div>
 
-            <div className="px-5 py-2.5 border-t ${DIVIDER} text-[9px] text-[#888888] space-y-1">
-              <div>【亚丁持仓】显示交易规则详情（行权/到期/敲出/分红），【非亚丁持仓】不显示交易规则。</div>
-              <div>免责声明：所有盈亏计算均为预估，实际盈亏以最终行权/平仓时的成交价格和交易规则为准。</div>
+              {/* 持仓概要（只读） */}
+              <div className={`px-5 py-4 border-b ${DIVIDER}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-4 rounded bg-[#C0C0C0]" />
+                  <span className="text-xs font-semibold text-[#555]">持仓概要</span>
+                </div>
+                <div className="grid grid-cols-3 gap-6">
+                  <div>
+                    <div className={`text-[9px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>时间信息</div>
+                    <div className="space-y-1.5 mt-2">
+                      {['开仓日', '到期日', '持有天数'].map(l => (
+                        <div key={l} className="flex justify-between text-[10px]"><span className="text-[#999]">{l}</span><span className="text-[#555]">—</span></div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className={`text-[9px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>名本与数量</div>
+                    <div className="space-y-1.5 mt-2">
+                      {['开仓名本', '期权费', '期权费率'].map(l => (
+                        <div key={l} className="flex justify-between text-[10px]"><span className="text-[#999]">{l}</span><span className="text-[#555]">—</span></div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className={`text-[9px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>价格信息</div>
+                    <div className="space-y-1.5 mt-2">
+                      {['开仓价', '执行价'].map(l => (
+                        <div key={l} className="flex justify-between text-[10px]"><span className="text-[#999]">{l}</span><span className="text-[#555]">—</span></div>
+                      ))}
+                    </div>
+                    <div className="text-[8px] text-[#BBB] mt-1">↑ 已去掉盈亏平衡点</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 关键事件记录（同上） */}
+              <div className="px-5 py-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-4 rounded bg-[#C0C0C0]" />
+                  <span className="text-xs font-semibold text-[#555]">关键事件记录</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F0F0F0] text-[#888]">N 条</span>
+                </div>
+                <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                  {['建仓', 'ST记录', '停复牌', '行权'].map(t => (
+                    <span key={t} className="text-[9px] px-1.5 py-0.5 rounded border border-[#C0C0C0] bg-[#EAEAEA] text-[#777]">{t}</span>
+                  ))}
+                  <span className="text-[8px] text-[#AAA]">↑ 仅亚丁额外显示：除权除息、分红调整</span>
+                </div>
+                <div className="h-32 bg-[#ECECEC] rounded flex items-center justify-center">
+                  <span className="text-[10px] text-[#999]">时间轴截止到到期日 · 行权事件替换为"平仓结算" · 非亚丁无 orderId · 无"异动"事件</span>
+                </div>
+                <div className="mt-2 text-[8px] text-[#AAA]">默认展开第一个事件</div>
+              </div>
             </div>
           </div>
 
           {/* ===== 状态变体一览 ===== */}
-          <div className="mt-4 p-4 border border-dashed border-[#B0B0B0] rounded-lg max-w-5xl mx-auto">
-            <div className="text-[10px] font-semibold text-[#666666] mb-3">状态变体一览（供 UI 覆盖所有场景）</div>
+          <div className="max-w-5xl mx-auto p-4 border border-dashed border-[#B0B0B0] rounded-lg">
+            <div className="text-[10px] font-semibold text-[#666] mb-3">状态变体一览（供 UI 覆盖所有场景）</div>
             <div className="grid grid-cols-2 gap-3">
               <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">头部状态标签（5 种）</div>
+                <div className="text-[9px] font-semibold text-[#555] mb-2">头部状态标签（5 种）</div>
                 <div className="space-y-1.5">
-                  {['盈利可行权（最高强调）', '亏损可行权（中等强调）', '未到期（普通标签）', '已到期（需视觉区分）', '已平仓（普通标签）'].map(s => (
+                  {[
+                    '盈利可行权（最高强调·红）',
+                    '亏损可行权（中等强调·灰）',
+                    '未到可行权日（普通标签·灰）',
+                    '已到期（需视觉区分·黄）',
+                    '已平仓（普通标签·灰）',
+                  ].map(s => (
                     <div key={s} className="flex items-center gap-2">
-                      <span className="text-[9px] px-2 py-0.5 rounded border border-[#B0B0B0] bg-[#EAEAEA] text-[#666666]">{s.split('（')[0]}</span>
-                      <span className="text-[8px] text-[#888888]">{s.split('（')[1]?.replace('）','')}</span>
+                      <span className="text-[9px] px-2 py-0.5 rounded border border-[#B0B0B0] bg-[#EAEAEA] text-[#666]">{s.split('（')[0]}</span>
+                      <span className="text-[8px] text-[#999]">{s.split('（')[1]}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">亚丁 vs 非亚丁 差异</div>
-                <div className="space-y-1.5 text-[9px]">
+                <div className="text-[9px] font-semibold text-[#555] mb-2">亚丁 vs 非亚丁 差异</div>
+                <div className="space-y-1.5 text-[9px] text-[#888]">
                   <div>亚丁：显示交易规则详情（行权/到期/敲出/分红）</div>
                   <div>非亚丁：不显示交易规则区块</div>
-                  <div>亚丁：底部"申请行权"按钮</div>
-                  <div>非亚丁：底部"手动平仓"按钮</div>
-                  <div>非亚丁：可多次部分平仓，平仓记录区动态追加</div>
-                  <div>完全平仓后状态自动变为"已平仓"</div>
+                  <div>亚丁：底部"申请行权"按钮（红/灰）</div>
+                  <div>非亚丁：底部"手动平仓"按钮（蓝）</div>
+                  <div>非亚丁：开仓/行权事件无 orderId</div>
+                  <div>亚丁：关键事件含除权除息+分红调整</div>
+                  <div>非亚丁：关键事件不含分红调整类</div>
                 </div>
               </div>
               <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">平仓记录区</div>
-                <div className="space-y-1.5 text-[9px]">
-                  <div>无平仓记录：不展示该区域</div>
-                  <div>有部分平仓：展示记录列表（日期/价格/名本/剩余）</div>
-                  <div>完全平仓：显示完整记录 + 状态变为"已平仓"</div>
-                  <div>行权中名本 &gt; 0 时：展示行权中名本字段</div>
+                <div className="text-[9px] font-semibold text-[#555] mb-2">开仓视图 vs 历史视图</div>
+                <div className="space-y-1.5 text-[9px] text-[#888]">
+                  <div>开仓：有"刷新"按钮 + 数据更新时间</div>
+                  <div>历史：无刷新、无行情时间戳</div>
+                  <div>开仓：核心指标"预估净收益"+"持仓估值"</div>
+                  <div>历史：核心指标"平仓净收益"+"开仓名本"+"总期权费"</div>
+                  <div>开仓：价格信息含盈亏平衡点、当前市价、涨幅</div>
+                  <div>历史：价格信息仅有开仓价、执行价</div>
+                  <div>开仓：有盈亏情景模拟器</div>
+                  <div>历史：无盈亏情景模拟器</div>
                 </div>
               </div>
               <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">标签与备注区</div>
-                <div className="space-y-1.5 text-[9px]">
-                  <div>无标签：仅显示"+ 新建"入口</div>
-                  <div>有标签：显示已选标签（可×移除）+ 可选标签 + 新建</div>
-                  <div>备注为空：不显示备注行</div>
-                  <div>交易确认书为空：显示"—"</div>
+                <div className="text-[9px] font-semibold text-[#555] mb-2">关键事件记录变体</div>
+                <div className="space-y-1.5 text-[9px] text-[#888]">
+                  <div>事件类型：建仓·除权除息·分红调整·ST记录·停复牌·行权（6种，无异动）</div>
+                  <div>外部录入/无行情：仅建仓+行权（跳过行情相关事件）</div>
+                  <div>亚丁：完整6种事件 · 含orderId</div>
+                  <div>非亚丁：跳过分红调整类 · 无orderId</div>
+                  <div>历史持仓：行权→"平仓结算" · 截止到到期日</div>
+                  <div>默认行为：展开第一个事件</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 手动平仓弹窗 */}
-          <div className="mt-4 p-4 border border-dashed border-[#B0B0B0] rounded-lg max-w-5xl mx-auto">
-            <div className="text-[10px] font-semibold text-[#666666] mb-2">↓ 弹窗：手动平仓（点击"手动平仓"按钮触发，默认日期为当天）</div>
-            <div className={`bg-white border ${BORDER} rounded-lg p-5 w-96 mx-auto`}>
-              <div className="text-sm font-semibold text-[#444444] mb-1">手动平仓</div>
-              <div className="text-xs text-[#666666] mb-1">标的名称（代码）</div>
-              <div className="text-xs text-[#777777] mb-4">交易对手：XXX | 剩余名本 XXXX 万</div>
-              <div className="mb-4 space-y-3 p-3 rounded-lg border ${DIVIDER} bg-[#F2F2F2]">
-                <div className="text-[10px] font-semibold text-[#444444]">平仓信息录入</div>
-                {['平仓价格', '本次平仓名本（万，可部分平仓）', '平仓日期（默认当天）'].map(label => (
-                  <div key={label}>
-                    <div className="text-[9px] text-[#888888] mb-0.5">{label}</div>
-                    <div className={`w-full h-8 border ${BORDER} rounded ${INPUT_BG} flex items-center px-2.5 text-xs text-[#999999]`}>
-                      {label.includes('日期') ? 'YYYY-MM-DD' : `请输入${label.split('（')[0]}`}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <div className={`flex-1 py-2 border ${BORDER} rounded text-xs text-center text-[#666666] bg-white`}>取消</div>
-                <div className={`flex-1 py-2 rounded text-xs text-center text-[#666666] ${BTN_FILL}`}>确认平仓</div>
-              </div>
-              <div className="text-[8px] text-[#888888] mt-2">剩余名本归零前可多次操作，确认后弹窗关闭并刷新数据</div>
-            </div>
+          <div className="text-[9px] text-[#999] text-center pb-2">
+            系统仅支持 Call 香草看涨期权 · 所有字段和规则以此为基准
           </div>
         </div>
       </div>
@@ -238,11 +385,11 @@ export function WireframeDetailPage() {
 export function WireframeExternalEntryPage() {
   const FieldRow = ({ label, required, hint }: { label: string; required?: boolean; hint?: string }) => (
     <div className="flex items-center py-2">
-      <span className="text-[#777777] w-[72px] flex-shrink-0 text-[11px]">
-        {required && <span className="text-[#888888]">*</span>}{label}
+      <span className="text-[#999] w-[72px] flex-shrink-0 text-[11px]">
+        {required && <span className="text-[#888]">*</span>}{label}
       </span>
-      <span className="text-[#B0B0B0] text-[11px]">—</span>
-      {hint && <span className="text-[#999999] text-[9px] ml-2">({hint})</span>}
+      <span className="text-[#BBB] text-[11px]">—</span>
+      {hint && <span className="text-[#AAA] text-[9px] ml-2">({hint})</span>}
     </div>
   );
 
@@ -250,23 +397,24 @@ export function WireframeExternalEntryPage() {
     <div className={`flex h-screen ${PAGE_BG} overflow-hidden`} style={{ minWidth: '1280px' }}>
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className={`flex items-center px-6 h-14 bg-white border-b ${BORDER} flex-shrink-0`}>
-          <span className="text-sm text-[#666666]">← 返回持仓总览</span>
+          <span className="text-sm text-[#666]">← 返回持仓总览</span>
         </div>
 
         <div className="flex-1 flex overflow-hidden">
           {/* 左栏：文本解析 */}
           <div className="w-[420px] flex-shrink-0 border-r border-[#B0B0B0] bg-white flex flex-col">
             <div className="px-4 pt-4 pb-2">
-              <div className="text-base font-bold text-[#444444]">录入外部持仓</div>
-              <div className="text-[10px] text-[#888888] mt-0.5">粘贴期权确认书或交易流水，自动提取结构化数据；也可直接在右侧确认板填写</div>
+              <div className="text-base font-bold text-[#444]">录入外部持仓</div>
+              <div className="text-[10px] text-[#999] mt-0.5">粘贴期权确认书或交易流水，自动提取结构化数据；也可直接在右侧确认板填写</div>
             </div>
             <div className="flex-1 flex flex-col p-4">
-              <div className={`flex-1 border ${BORDER} rounded-lg bg-[#F2F2F2] p-3`}>
-                <div className="text-xs text-[#999999] font-mono leading-relaxed">
+              <div className="flex-1 border border-[#B0B0B0] rounded-lg bg-[#F2F2F2] p-3">
+                <div className="text-xs text-[#999] font-mono leading-relaxed">
                   标的名称：贵州茅台<br/>
                   标的代码：600519.SH<br/>
+                  交易类型：看涨期权<br/>
                   结构：100%<br/>
-                  期限：6月<br/>
+                  期限：6个月<br/>
                   交易对手：银河证券<br/>
                   开仓日：2026-05-20<br/>
                   到期日：2026-11-20<br/>
@@ -275,12 +423,12 @@ export function WireframeExternalEntryPage() {
                   期权费率：5%
                 </div>
               </div>
-              <div className="mt-2 text-[10px] text-[#888888] leading-relaxed">
-                支持识别：标的名称/代码、行权价、名义本金、权利金率、起止日期、交易对手等
+              <div className="mt-2 text-[10px] text-[#999] leading-relaxed">
+                支持识别：标的名称/代码、交易类型、结构、期限、交易对手、名本、开仓价、费率等
               </div>
             </div>
             <div className="px-4 py-2.5 border-t border-[#B0B0B0]">
-              <div className={`w-full py-2.5 ${BTN_FILL} text-[#666666] text-sm text-center rounded`}>解析文本</div>
+              <div className="w-full py-2.5 bg-[#B0B0B0] text-[#666] text-sm text-center rounded">解析文本</div>
             </div>
           </div>
 
@@ -289,84 +437,104 @@ export function WireframeExternalEntryPage() {
             <div className="flex-1 overflow-y-auto p-4">
               <div className="min-h-full flex flex-col">
                 <div className={`bg-white border ${BORDER} rounded-lg overflow-hidden flex flex-col flex-1`}>
-                  <div className={`px-4 py-2.5 ${PAGE_BG} border-b ${DIVIDER} flex-shrink-0`}>
+
+                  {/* 头部概要 */}
+                  <div className={`px-4 py-2.5 bg-[#F5F5F5] border-b ${DIVIDER} flex-shrink-0`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="text-lg font-bold text-[#444444]">标的名称</span>
-                        <span className="text-xs text-[#888888] font-mono">代码</span>
-                        <span className="text-[8px] text-[#888888]">（标的未识别时：名称需最高视觉强调 + ⚠ 提示）</span>
+                        <span className="text-lg font-bold text-[#444]">标的名称</span>
+                        <span className="text-xs text-[#999] font-mono">代码</span>
+                        <span className="text-[8px] text-[#999]">（标的未识别时：名称需最高视觉强调 + ⚠ 提示）</span>
                       </div>
-                      <span className="text-[10px] px-2.5 py-0.5 rounded-full border border-[#B0B0B0] text-[#777777]">点击字段可编辑</span>
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-full border border-[#B0B0B0] text-[#888]">点击字段可编辑</span>
                     </div>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      {['结构', '看涨期权', '期限', '交易对手'].map(tag => (
-                        <span key={tag} className="px-2 py-0.5 rounded text-[10px] border border-[#B0B0B0] text-[#666666]">{tag}</span>
-                      ))}
+                      <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#777]">结构</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#777]">Call 看涨期权</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#777]">期限</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 divide-x ${DIVIDER} flex-1">
-                    <div className="p-4 space-y-6">
+                  {/* 交易对手 + 标签（同行） */}
+                  <div className={`px-4 py-2.5 border-b ${DIVIDER} flex-shrink-0 flex items-center gap-6`}>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className="text-[11px] font-semibold text-[#777]">交易对手</span>
+                      <div className="w-40 h-7 border border-[#B0B0B0] rounded bg-[#EAEAEA] flex items-center px-2.5 text-[10px] text-[#999]">输入或选择 ↓</div>
+                      <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] bg-[#EAEAEA] text-[#777]">银河证券</span>
+                      <span className="text-[8px] text-[#999]">↓ 历史下拉（5条）</span>
+                    </div>
+                    <div className="flex-1 flex items-center gap-2 flex-wrap min-w-0">
+                      <span className="text-[11px] font-semibold text-[#777] flex-shrink-0">标签</span>
+                      {['停牌 ×', 'ST ×'].map(t => (
+                        <span key={t} className="text-[10px] px-2 py-1 rounded border border-[#B0B0B0] bg-[#EAEAEA] text-[#666]">{t}</span>
+                      ))}
+                      <span className="text-[10px] px-2 py-1 rounded border border-[#B0B0B0] text-[#B0B0B0]">可选标签</span>
+                      <div className="flex items-center gap-1">
+                        <div className="w-20 h-7 border border-[#B0B0B0] rounded bg-[#EAEAEA]" />
+                        <div className="px-2 py-1 rounded bg-[#B0B0B0] text-[9px] text-[#666]">+ 新建</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 三列字段（标的→结构→期限 | 名本→价格 | 备注） */}
+                  <div className={`grid grid-cols-3 divide-x ${DIVIDER} flex-1`}>
+                    {/* 列1：标的 → 结构 → 期限 */}
+                    <div className="p-4 flex flex-col gap-6">
                       <div>
-                        <div className="text-[10px] font-semibold text-[#777777] uppercase tracking-wider border-b ${DIVIDER} pb-1">基本信息</div>
+                        <div className={`text-[10px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>标的</div>
                         <div className="space-y-1 mt-2">
                           <FieldRow label="标的名称" required />
                           <FieldRow label="标的代码" required />
-                          <div className="text-[8px] text-[#888888] pl-[72px]">⚠ 未识别标的时显示警告</div>
-                          <FieldRow label="结构" required hint="chip：100%/103%/105% + 更多展开" />
-                          <FieldRow label="交易类型" hint="Call 看涨期权（不可修改）" />
-                          <FieldRow label="交易对手" required />
+                          <div className="text-[8px] text-[#999] pl-[72px]">⚠ 未识别标的时显示警告</div>
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] font-semibold text-[#777777] uppercase tracking-wider border-b ${DIVIDER} pb-1">时间信息</div>
+                        <div className={`text-[10px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>结构</div>
                         <div className="space-y-1 mt-2">
-                          <FieldRow label="期限" required hint="编辑态：数字输入+单位下拉（周/月）" />
-                          <div className="text-[8px] text-[#888888] pl-[72px]">快捷填充：2周 | 1月 | 3月 | 6月 | 12月</div>
+                          <FieldRow label="结构" required hint="chip：100%/103%/105% + 更多展开" />
+                          <FieldRow label="交易类型" hint="Call 看涨期权（固定）" />
+                        </div>
+                      </div>
+                      <div>
+                        <div className={`text-[10px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>期限</div>
+                        <div className="space-y-1 mt-2">
+                          <FieldRow label="期限" required hint="数字输入+单位下拉(周/月)" />
+                          <div className="text-[8px] text-[#999] pl-[72px]">快捷填充：2周 | 1月 | 3月 | 6月 | 12月</div>
                           <FieldRow label="开仓日" required hint="期限联动自动填充" />
                           <FieldRow label="到期日" required hint="期限联动自动填充" />
-                          <div className="text-[8px] text-[#888888] pl-[72px]">剩余天数自动计算展示</div>
+                          <div className="text-[8px] text-[#999] pl-[72px]">剩余天数自动计算展示</div>
                         </div>
                       </div>
                     </div>
 
+                    {/* 列2：名本 → 价格 */}
+                    <div className="p-4 flex flex-col gap-6">
+                      <div>
+                        <div className={`text-[10px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>名本</div>
+                        <div className="space-y-1 mt-2">
+                          <FieldRow label="开仓名本" required hint="万" />
+                          <div className="text-[8px] text-[#999] pl-[72px]">快捷填充：100万 | 500万 | 1000万</div>
+                          <FieldRow label="期权费率" required hint="%" />
+                          <FieldRow label="期权费" required hint="自动：名本×10000×费率÷100" />
+                        </div>
+                        <div className="text-[8px] text-[#BBB] mt-1">↑ 注意：使用"名本"而非"本金"（金融术语严谨性）</div>
+                      </div>
+                      <div>
+                        <div className={`text-[10px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>价格</div>
+                        <div className="space-y-1 mt-2">
+                          <FieldRow label="开仓价" required />
+                          <FieldRow label="执行价" required hint="自动：开仓价×结构%" />
+                          <div className="text-[8px] text-[#999] pl-[72px]">联动计算：改任一项，关联字段自动更新</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 列3：备注 */}
                     <div className="p-4">
-                      <div className="text-[10px] font-semibold text-[#777777] uppercase tracking-wider border-b ${DIVIDER} pb-1">本金与价格</div>
-                      <div className="space-y-1 mt-2">
-                        <FieldRow label="开仓名本" required hint="万" />
-                        <div className="text-[8px] text-[#888888] pl-[72px]">快捷填充：100万 | 500万 | 1000万</div>
-                        <FieldRow label="开仓价" required />
-                        <FieldRow label="期权数量" required hint="自动：名本×10000÷开仓价" />
-                        <FieldRow label="期权费率" required hint="%" />
-                        <FieldRow label="期权费" required hint="自动：名本×10000×费率÷100" />
-                        <FieldRow label="执行价" required hint="自动：开仓价×结构%" />
-                        <div className="text-[8px] text-[#888888] pl-[72px]">联动计算：改任一项，关联字段自动更新</div>
-                      </div>
-                    </div>
-
-                    <div className="p-4 space-y-6">
-                      <div>
-                        <div className="text-[10px] font-semibold text-[#777777] uppercase tracking-wider border-b ${DIVIDER} pb-1">备注</div>
-                        <div className="mt-2">
-                          <div className={`w-full h-28 border ${BORDER} rounded ${INPUT_BG}`} />
-                          <div className="text-[8px] text-[#888888] mt-0.5">多行文本域，支持换行</div>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-semibold text-[#777777] uppercase tracking-wider border-b ${DIVIDER} pb-1">标签</div>
-                        <div className="flex gap-1 mt-2 flex-wrap">
-                          {['标签1 ×', '标签2 ×'].map(t => (
-                            <span key={t} className="text-[9px] px-1.5 py-0.5 rounded border border-[#B0B0B0] bg-[#EAEAEA] text-[#666666]">{t}</span>
-                          ))}
-                          {['可选标签'].map(t => (
-                            <span key={t} className="text-[9px] px-1.5 py-0.5 rounded border border-[#B0B0B0] text-[#888888]">{t}</span>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-1 mt-1.5">
-                          <div className={`w-20 h-6 border ${BORDER} rounded ${INPUT_BG}`} />
-                          <div className={`px-2 py-1 rounded ${BTN_FILL} text-[9px] text-[#666666]`}>+ 新建</div>
-                        </div>
-                        <div className="text-[8px] text-[#888888] mt-1">标签池跨持仓共享，创建后可在其他持仓录入时复用</div>
+                      <div className={`text-[10px] font-semibold text-[#999] uppercase tracking-wider border-b ${DIVIDER} pb-1`}>备注</div>
+                      <div className="mt-2">
+                        <div className="w-full h-28 border border-[#B0B0B0] rounded bg-[#EAEAEA]" />
+                        <div className="text-[8px] text-[#999] mt-0.5">多行文本域 · 点击编辑 · 已去掉重复标签</div>
                       </div>
                     </div>
                   </div>
@@ -375,51 +543,52 @@ export function WireframeExternalEntryPage() {
             </div>
 
             <div className={`flex-shrink-0 px-4 py-2.5 border-t ${BORDER} bg-white flex items-center gap-4`}>
-              <div className={`flex-1 py-2.5 border ${BORDER} rounded text-sm text-center text-[#666666]`}>取消</div>
-              <div className={`flex-1 py-2.5 ${BTN_FILL} rounded text-sm text-center text-[#666666]`}>确认并录入持仓</div>
-              <div className={`text-[8px] text-[#888888]`}>必填项未填写时点击 → 未填字段闪烁提示（短暂强调后恢复），不提交</div>
+              <div className="flex-1 py-2.5 border border-[#B0B0B0] rounded text-sm text-center text-[#777]">取消</div>
+              <div className="flex-1 py-2.5 bg-[#B0B0B0] rounded text-sm text-center text-[#666]">确认并录入持仓</div>
+              <div className="text-[8px] text-[#999]">必填项未填 → 字段闪烁提示（1.2s）· 交易对手自动记录到历史</div>
             </div>
-          </div>
 
-          {/* ===== 状态变体一览 ===== */}
-          <div className="mt-4 p-4 border border-dashed border-[#B0B0B0] rounded-lg max-w-5xl mx-auto">
-            <div className="text-[10px] font-semibold text-[#666666] mb-3">状态变体一览（供 UI 覆盖所有场景）</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">字段交互状态（EditableField）</div>
-                <div className="space-y-1.5 text-[9px]">
-                  <div className="text-[#666666]">空字段 → 直接展示输入框（蓝色边框）+ placeholder 提示</div>
-                  <div className="text-[#666666]">已填字段 → 展示文本，悬停虚线边框，点击进入编辑态</div>
-                  <div className="text-[#666666]">编辑态 → 输入框 + ✓✕ 按钮 + 淡蓝背景</div>
-                  <div className="text-[#888888]">失焦/Enter → 提交 | Escape/✕ → 取消恢复原值</div>
+            {/* ===== 状态变体一览 ===== */}
+            <div className="p-4 border border-dashed border-[#B0B0B0] rounded-lg mx-4 mb-4">
+              <div className="text-[10px] font-semibold text-[#666] mb-3">状态变体一览（供 UI 覆盖所有场景）</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="border border-[#B0B0B0] rounded p-3 bg-white">
+                  <div className="text-[9px] font-semibold text-[#555] mb-2">字段交互状态（EditableField）</div>
+                  <div className="space-y-1.5 text-[9px] text-[#888]">
+                    <div>空字段 → 直接展示输入框（蓝边框）+ placeholder</div>
+                    <div>已填字段 → 展示文本，悬停虚线边框，点击进入编辑态</div>
+                    <div>编辑态 → 输入框 + ✓✕ 按钮 + 淡蓝背景</div>
+                    <div>失焦/Enter → 提交 | Escape/✕ → 取消恢复</div>
+                  </div>
                 </div>
-              </div>
-              <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">特殊字段控件</div>
-                <div className="space-y-1.5 text-[9px]">
-                  <div className="text-[#666666]">期限：编辑态=数字输入+单位下拉(周/月) | 快捷chips常驻</div>
-                  <div className="text-[#666666]">结构：chip选择(100%/103%/105%)+"更多"展开全部</div>
-                  <div className="text-[#888888]">开仓名本：快捷chips(100万/500万/1000万)</div>
-                  <div className="text-[#888888]">交易类型：固定"Call 看涨期权"，不可修改</div>
-                  <div className="text-[#888888]">期权费/执行价/期权数量：自动计算，黑色文本展示</div>
+                <div className="border border-[#B0B0B0] rounded p-3 bg-white">
+                  <div className="text-[9px] font-semibold text-[#555] mb-2">特殊字段控件</div>
+                  <div className="space-y-1.5 text-[9px] text-[#888]">
+                    <div>期限：编辑态=数字输入+单位下拉(周/月) | 快捷chips常驻</div>
+                    <div>结构：chip选择(100%/103%/105%)+"更多"展开</div>
+                    <div>开仓名本：快捷chips(100万/500万/1000万)</div>
+                    <div>交易类型：固定"Call 看涨期权"，不可修改</div>
+                    <div>交易对手：独立输入框+历史下拉(5条) · 标签同行右侧</div>
+                    <div>期权费/执行价：自动计算，黑色文本展示</div>
+                  </div>
                 </div>
-              </div>
-              <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">校验与提交状态</div>
-                <div className="space-y-1.5 text-[9px]">
-                  <div className="text-[#666666]">标的有效 → 正常展示名称+代码，无警告</div>
-                  <div className="text-[#666666]">标的无效 → 名称需最高视觉强调 + ⚠ 未识别提示</div>
-                  <div className="text-[#888888]">必填项齐全+标的有效 → "确认并录入持仓"可点击</div>
-                  <div className="text-[#888888]">有未填必填项 → 按钮disabled + 点击闪烁提示（1.2s）</div>
+                <div className="border border-[#B0B0B0] rounded p-3 bg-white">
+                  <div className="text-[9px] font-semibold text-[#555] mb-2">校验与提交</div>
+                  <div className="space-y-1.5 text-[9px] text-[#888]">
+                    <div>标的有效 → 正常展示，无警告</div>
+                    <div>标的无效 → ⚠ 未识别提示 + 名称强调</div>
+                    <div>必填齐全+标的有效 → 按钮可点击</div>
+                    <div>有未填必填项 → 按钮disabled + 点击闪烁</div>
+                  </div>
                 </div>
-              </div>
-              <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">文本解析状态</div>
-                <div className="space-y-1.5 text-[9px]">
-                  <div className="text-[#666666]">文本为空 → "解析文本"按钮 disabled</div>
-                  <div className="text-[#666666]">有文本 → 按钮可点击 → 点击后显示 spinner + "解析中..."</div>
-                  <div className="text-[#888888]">解析完成 → 右侧表单非覆盖式填充（仅更新匹配到的字段）</div>
-                  <div className="text-[#888888]">解析后 → 联动计算自动触发（名本→期权费 等）</div>
+                <div className="border border-[#B0B0B0] rounded p-3 bg-white">
+                  <div className="text-[9px] font-semibold text-[#555] mb-2">文本解析与布局</div>
+                  <div className="space-y-1.5 text-[9px] text-[#888]">
+                    <div>文本为空 → 按钮 disabled</div>
+                    <div>有文本 → 点击解析 → spinner</div>
+                    <div>解析完成 → 非覆盖式填充（仅更新匹配字段）</div>
+                    <div>布局：左栏解析 + 右栏确认板 → 交易对手+标签同行 → 三列字段（标的→结构→期限 | 名本→价格 | 备注）</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -429,6 +598,7 @@ export function WireframeExternalEntryPage() {
     </div>
   );
 }
+
 
 // ============================================================
 // 批量导入 — 数据审核 线框图
@@ -438,73 +608,84 @@ export function WireframeBatchImportPage() {
     <div className={`flex h-screen ${PAGE_BG} overflow-hidden`} style={{ minWidth: '1280px' }}>
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className={`flex items-center justify-between px-6 h-14 bg-white border-b ${BORDER} flex-shrink-0`}>
-          <span className="text-sm text-[#666666]">← 返回持仓总览</span>
-          <span className="text-lg font-bold text-[#222222]">批量导入 — 数据审核</span>
+          <span className="text-sm text-[#666]">← 返回持仓总览</span>
+          <span className="text-lg font-bold text-[#222]">批量导入 — 数据审核</span>
           <div className="w-24" />
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
+          {/* 上传区域 */}
           <div className="max-w-2xl mx-auto mt-16">
-            <div className={`border-2 border-dashed ${BORDER} rounded-lg bg-white p-12 text-center`}>
-              <div className="text-sm font-semibold text-[#444444] mb-1">点击上传或拖拽 Excel 文件到此处</div>
-              <div className="text-xs text-[#888888] mb-4">支持 .xlsx / .xls / .csv 格式</div>
-              <div className={`inline-block px-6 py-2.5 ${BTN_FILL} text-[#666666] text-sm rounded`}>选择文件</div>
+            <div className="border-2 border-dashed border-[#B0B0B0] rounded-lg bg-white p-12 text-center">
+              <div className="text-sm font-semibold text-[#555] mb-1">点击上传或拖拽 Excel 文件到此处</div>
+              <div className="text-xs text-[#999] mb-4">支持 .xlsx / .xls / .csv 格式</div>
+              <div className="inline-block px-6 py-2.5 bg-[#B0B0B0] text-[#666] text-sm rounded">选择文件</div>
             </div>
-            <div className="mt-4 flex items-center justify-between text-xs text-[#888888]">
-              <span>导入字段：标的名称、标的代码、交易对手、结构、期限、开仓日、到期日、开仓名本(万)、开仓价、执行价、期权费率、期权费、期权数量</span>
-              <span className="text-[#777777] ml-4">↓ 下载导入模板</span>
+            <div className="mt-4 flex items-center justify-between text-xs text-[#999]">
+              <span>导入字段：标的名称、标的代码、交易对手、结构、期限、开仓日、到期日、开仓名本(万)、开仓价、执行价、期权费率、期权费</span>
+              <span className="text-[#888] ml-4">↓ 下载导入模板</span>
             </div>
           </div>
 
           {/* 审核列表 */}
           <div className="mt-6 p-4 border border-dashed border-[#B0B0B0] rounded-lg">
-            <div className="text-[10px] font-semibold text-[#666666] mb-3">↓ 上传后展示：审核列表</div>
-            <div className="text-[8px] text-[#888888] mb-2">
-              字段编辑类型：期限=数字+单位下拉 | 结构=下拉选择 | 日期=date input | 币种=展示不可编辑 | 其余=文本输入<br/>
-              联动计算：标的名称↔代码 | 期限→日期 | 名本+费率→期权费 | 名本+开仓价→期权数量 | 开仓价×结构→执行价<br/>
-              异常行视觉强调：错误=最高强调（需立即关注）| 警告=中等强调（建议复核）| 正常=无强调<br/>
-              编辑单元格 → 失焦/回车提交 → 自动重新校验 → 状态实时刷新 · 确认导入后跳转回持仓总览
+            <div className="text-[10px] font-semibold text-[#666] mb-3">↓ 上传后展示：审核列表</div>
+            <div className="text-[8px] text-[#BBB] mb-2">
+              校验规则（极简）：仅检查必填字段为空 → error · 标的名/代码未识别 → warning · 其余一律不校验<br/>
+              编辑后自动重新校验 · 状态实时刷新 · 确认导入后跳转回持仓总览
             </div>
             <div className={`bg-white border ${BORDER} rounded-lg overflow-hidden`}>
-              <div className={`flex items-center justify-between px-4 py-2.5 border-b ${DIVIDER} ${PAGE_BG}`}>
+              {/* 汇总条 */}
+              <div className={`flex items-center justify-between px-4 py-2.5 border-b ${DIVIDER} bg-[#F5F5F5]`}>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold text-[#444444]">文件名.xlsx — 共解析 35 条</span>
+                  <span className="text-sm font-semibold text-[#555]">文件名.xlsx — 共解析 35 条</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-[11px] text-[#666666]">✓ 26 正常</span>
-                    <span className="text-[11px] text-[#666666]">△ 6 警告</span>
-                    <span className="text-[11px] text-[#666666]">✕ 3 错误</span>
+                    <span className="text-[11px] text-[#888]">✓ 30 正常</span>
+                    <span className="text-[11px] text-[#888]">△ 2 警告</span>
+                    <span className="text-[11px] text-[#C62828]">✕ 3 错误</span>
                   </div>
                 </div>
-                <span className="text-xs text-[#777777] underline">重新上传</span>
+                <span className="text-xs text-[#888] underline">重新上传</span>
               </div>
 
+              {/* 筛选栏 */}
               <div className={`flex items-center justify-between px-4 py-2 border-b ${DIVIDER}`}>
                 <div className="flex items-center gap-2">
-                  {['全部 (35)', '错误 (3)', '警告 (6)', '正常 (26)'].map((tab, i) => (
-                    <span key={tab} className={`text-[10px] px-2.5 py-1 rounded border ${BORDER} ${i === 0 ? 'bg-[#C0C0C0] text-[#444444]' : 'text-[#666666]'}`}>{tab}</span>
+                  {['全部 (35)', '错误 (3)', '警告 (2)', '正常 (30)'].map((tab, i) => (
+                    <span key={tab} className={`text-[10px] px-2.5 py-1 rounded border ${BORDER} ${i === 0 ? 'bg-[#C0C0C0] text-[#555]' : 'text-[#888]'}`}>{tab}</span>
                   ))}
                 </div>
-                <div className={`w-48 h-7 border ${BORDER} rounded ${INPUT_BG} flex items-center px-2.5`}>
-                  <span className="text-[11px] text-[#999999]">搜索标的/代码/对手</span>
+                <div className="w-48 h-7 border border-[#B0B0B0] rounded bg-[#EAEAEA] flex items-center px-2.5">
+                  <span className="text-[11px] text-[#999]">搜索标的/代码/对手</span>
                 </div>
               </div>
 
+              {/* 表格 */}
               <div className="overflow-auto" style={{ maxHeight: '240px' }}>
-                <table className="w-full text-xs" style={{ minWidth: '1900px' }}>
+                <table className="w-full text-xs" style={{ minWidth: '1800px' }}>
                   <thead>
-                    <tr className={`${ROW_BG} border-b ${DIVIDER}`}>
-                      {['状态', '标的名称', '标的代码', '币种', '交易对手', '结构', '期限', '开仓日', '到期日', '开仓名本(万)', '开仓价', '执行价', '期权费率', '期权费', '期权数量', '异常说明'].map(h => (
-                        <th key={h} className="text-left px-2 py-2.5 text-[10px] font-semibold text-[#555555] whitespace-nowrap">{h}</th>
+                    <tr className={`bg-[#ECECEC] border-b ${DIVIDER}`}>
+                      {['状态', '标的名称', '标的代码', '币种', '交易对手', '结构', '期限', '开仓日', '到期日', '开仓名本(万)', '开仓价', '执行价', '期权费率', '期权费', '异常说明'].map(h => (
+                        <th key={h} className="text-left px-2 py-2.5 text-[10px] font-semibold text-[#666] whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {[1,2,3,4,5].map(i => (
-                      <tr key={i} className="border-b border-[#D0D0D0]">
-                        <td className="px-2 py-1.5"><span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] bg-[#EAEAEA] text-[#666666]">{i === 3 ? '警告' : i === 5 ? '错误' : '正常'}</span></td>
-                        {Array.from({length: 15}, (_, j) => (
-                          <td key={j} className="px-2 py-1.5"><div className={`h-4 rounded ${BLOCK}`} style={{ width: `${60 + Math.random() * 40}px` }} /></td>
+                    {[
+                      { status: '错误', bg: 'bg-[#FFF0F0]', note: '标的名称未填写、开仓名本未填写' },
+                      { status: '错误', bg: 'bg-[#FFF0F0]', note: '结构未填写' },
+                      { status: '错误', bg: 'bg-[#FFF0F0]', note: '交易对手未填写' },
+                      { status: '警告', bg: 'bg-[#FFFDE7]', note: '标的名称未识别，后续展示可能缺失数据' },
+                      { status: '正常', bg: '', note: '—' },
+                    ].map((row, i) => (
+                      <tr key={i} className={`border-b border-[#D0D0D0] ${row.bg}`}>
+                        <td className="px-2 py-1.5">
+                          <span className={`text-[10px] px-2 py-0.5 rounded border ${row.status === '错误' ? 'border-[#FCA5A5] text-[#C62828]' : row.status === '警告' ? 'border-[#FDE68A] text-[#B45309]' : 'border-[#BBF7D0] text-[#15803D]'}`}>{row.status}</span>
+                        </td>
+                        {Array.from({length: 14}, (_, j) => (
+                          <td key={j} className="px-2 py-1.5"><div className="h-4 rounded bg-[#D8D8D8]" style={{ width: '60px' }} /></td>
                         ))}
+                        <td className="px-2 py-1.5"><span className={`text-[10px] ${row.status === '错误' ? 'text-[#C62828]' : row.status === '警告' ? 'text-[#B45309]' : 'text-[#CCC]'}`}>{row.note}</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -512,51 +693,54 @@ export function WireframeBatchImportPage() {
               </div>
 
               <div className={`flex items-center justify-between px-4 py-3 border-t ${DIVIDER}`}>
-                <span className="text-[11px] text-[#666666]">共 35 条，其中 32 条可导入 — 异常数据将在导入时跳过</span>
+                <span className="text-[11px] text-[#888]">共 35 条，32 条可导入 — 异常数据将在导入时跳过</span>
                 <div className="flex items-center gap-3">
-                  <div className={`px-5 py-2 border ${BORDER} rounded text-xs text-[#666666]`}>取消</div>
-                  <div className={`px-5 py-2 ${BTN_FILL} rounded text-xs text-[#666666]`}>确认导入 (32 条)</div>
+                  <div className="px-5 py-2 border border-[#B0B0B0] rounded text-xs text-[#777]">取消</div>
+                  <div className="px-5 py-2 bg-[#B0B0B0] rounded text-xs text-[#666]">确认导入 (32 条)</div>
                 </div>
               </div>
             </div>
           </div>
+
           {/* ===== 状态变体一览 ===== */}
-          <div className="mt-4 p-4 border border-dashed border-[#B0B0B0] rounded-lg max-w-5xl mx-auto">
-            <div className="text-[10px] font-semibold text-[#666666] mb-3">状态变体一览（供 UI 覆盖所有场景）</div>
+          <div className="mt-4 p-4 border border-dashed border-[#B0B0B0] rounded-lg">
+            <div className="text-[10px] font-semibold text-[#666] mb-3">状态变体一览（供 UI 覆盖所有场景）</div>
             <div className="grid grid-cols-2 gap-3">
               <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">页面状态</div>
+                <div className="text-[9px] font-semibold text-[#555] mb-2">校验规则（极简版）</div>
                 <div className="space-y-1.5 text-[9px]">
-                  <div>上传前：展示上传区域（虚线框+拖拽+选择文件按钮）</div>
-                  <div>上传后：展示审核列表（汇总条+筛选栏+表格+底部操作）</div>
+                  <div className="text-[#C62828]">error：必填字段为空 → 阻止导入</div>
+                  <div className="text-[#B45309]">warning：标的名/代码未识别 → 不阻止</div>
+                  <div className="text-[#999]">不校验：日期、费率、名本量级、结构、周末、计算偏差等</div>
+                  <div className="text-[#999]">原因：用户填什么就是什么，不替用户判断业务合理性</div>
+                </div>
+              </div>
+              <div className="border border-[#B0B0B0] rounded p-3 bg-white">
+                <div className="text-[9px] font-semibold text-[#555] mb-2">页面状态</div>
+                <div className="space-y-1.5 text-[9px] text-[#888]">
+                  <div>上传前：展示上传区域（虚线框+拖拽+选择文件）</div>
+                  <div>上传后：展示审核列表（汇总条+筛选栏+表格+操作）</div>
                   <div>确认导入后：跳转回持仓总览页</div>
                 </div>
               </div>
               <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">行状态变体（状态列 + 整行强调）</div>
-                <div className="space-y-1.5 text-[9px]">
-                  <div>错误行：状态="错误"标签（最高强调）+ 整行最高视觉强调 + 异常说明列列出具体问题</div>
-                  <div>警告行：状态="警告"标签（中等强调）+ 整行中等视觉强调 + 异常说明列列出具体问题</div>
-                  <div>正常行：状态="正常"标签（无强调）+ 整行无特殊样式 + 异常说明列显示"—"</div>
+                <div className="text-[9px] font-semibold text-[#555] mb-2">行状态视觉强调</div>
+                <div className="space-y-1.5 text-[9px] text-[#888]">
+                  <div>错误行：红色浅底 + 状态="错误"标签（最高强调）</div>
+                  <div>警告行：黄色浅底 + 状态="警告"标签（中等强调）</div>
+                  <div>正常行：无特殊样式 + 状态="正常"标签</div>
+                  <div>空必填字段 → 单元格红色高亮"未填写"</div>
                 </div>
               </div>
               <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">筛选标签状态</div>
-                <div className="space-y-1.5 text-[9px]">
-                  <div>全部（默认选中）：需视觉区分为当前激活标签</div>
-                  <div>错误/警告/正常：各自与对应行状态视觉关联</div>
-                  <div>切换标签 → 表格实时过滤 + 统计数字不变（仅过滤展示）</div>
-                </div>
-              </div>
-              <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                <div className="text-[9px] font-semibold text-[#555555] mb-2">字段编辑控件类型</div>
-                <div className="space-y-1.5 text-[9px]">
+                <div className="text-[9px] font-semibold text-[#555] mb-2">字段编辑控件</div>
+                <div className="space-y-1.5 text-[9px] text-[#888]">
                   <div>期限：数字输入 + 单位下拉（周/月）</div>
                   <div>结构：下拉选择</div>
                   <div>开仓日/到期日：date input</div>
                   <div>币种：纯展示标签（不可编辑）</div>
                   <div>其余字段：文本输入</div>
-                  <div>编辑后 → 自动重新校验 → 状态实时刷新</div>
+                  <div>编辑后自动重新校验 → 状态实时刷新</div>
                 </div>
               </div>
             </div>
@@ -567,6 +751,7 @@ export function WireframeBatchImportPage() {
   );
 }
 
+
 // ============================================================
 // 历史持仓 线框图
 // ============================================================
@@ -575,109 +760,128 @@ export function WireframeHistoricalPage() {
     <div className={`flex h-screen ${PAGE_BG} overflow-hidden`} style={{ minWidth: '1200px' }}>
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className={`flex items-center justify-between px-6 h-14 bg-white border-b ${BORDER} flex-shrink-0`}>
-          <span className="text-sm text-[#666666]">← 返回持仓总览</span>
-          <span className="text-lg font-bold text-[#222222]">历史持仓</span>
+          <span className="text-sm text-[#666]">← 返回持仓总览</span>
+          <span className="text-lg font-bold text-[#222]">历史持仓</span>
           <div className="w-24" />
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* 已实现损益总额汇总卡片 */}
+          <div className={`bg-white border ${BORDER} rounded-lg shadow-sm`}>
+            <div className={`flex items-center justify-between px-5 py-3 border-b ${DIVIDER}`}>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center bg-[#E8E8E8] rounded-md p-0.5">
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-white text-[#444] shadow-sm">CNY</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded text-[#999]">USD</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded text-[#999]">HKD</span>
+                </div>
+                <span className="text-sm font-semibold text-[#555]">已实现损益总额</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-5 gap-4 px-5 py-4">
+              {[
+                { label: '总盈亏', value: '+¥320万', sub: '8 笔', color: 'text-[#C62828]' },
+                { label: '盈利 / 亏损', value: '6 笔 / 2 笔', sub: '', color: '' },
+                { label: '总名本', value: '5,200万', sub: 'CNY', color: '' },
+                { label: '总期权费', value: '¥108万', sub: '', color: '' },
+                { label: '平均收益率', value: '+8.5%', sub: '', color: 'text-[#C62828]' },
+              ].map((m, i) => (
+                <div key={i}>
+                  <div className="text-[10px] text-[#999] mb-1">{m.label}</div>
+                  <div className={`text-lg font-bold ${m.color || 'text-[#222]'}`}>{m.value}</div>
+                  {m.sub && <div className="text-[10px] text-[#999] mt-0.5">{m.sub}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 列表 */}
           <div className={`bg-white border ${BORDER} rounded-lg`}>
             <div className={`flex items-center justify-between px-4 py-3 border-b ${DIVIDER}`}>
               <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-[#444444]">共 X 条</span>
-                <div className="flex items-center gap-1.5">
-                  {['全部', '已平仓', '已到期'].map((tab, i) => (
-                    <span key={tab} className={`text-[10px] px-2 py-0.5 rounded border ${BORDER} ${i === 0 ? 'bg-[#C0C0C0] text-[#444444]' : 'text-[#666666]'}`}>{tab}</span>
-                  ))}
-                </div>
+                <span className="text-sm font-semibold text-[#555]">共 N 条</span>
               </div>
-              <div className={`w-52 h-7 border ${BORDER} rounded ${INPUT_BG} flex items-center px-2.5`}>
-                <span className="text-[11px] text-[#999999]">搜索标的名称/代码</span>
+              <div className="w-52 h-7 border border-[#B0B0B0] rounded bg-[#EAEAEA] flex items-center px-2.5">
+                <span className="text-[11px] text-[#999]">🔍 搜索标的名称/代码</span>
+                <span className="text-[8px] text-[#BBB] ml-auto">↓ 建议列表</span>
               </div>
-            </div>
-            <div className={`px-4 py-1.5 text-[8px] text-[#888888] border-b ${DIVIDER} ${PAGE_BG}`}>
-              点击列标题切换升序/降序（当前排序列显示 ▲/▼）· 状态列：已平仓/已到期 两种状态需有明确视觉区分 | 非亚丁已平仓持仓可点击状态切换回"未到期"（移回主列表）
-              &nbsp;·&nbsp; 标的名称为可点击链接 → 跳转持仓详情页 · 搜索框聚焦弹出建议列表
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1000px] text-xs">
                 <thead>
-                  <tr className={`${ROW_BG} border-b ${DIVIDER}`}>
-                    {['标的信息', '交易对手', '结构', '状态', '开仓日 / 到期日', '名义本金', '平仓收益', '累计净收益', '操作'].map(h => (
-                      <th key={h} className="text-left px-3 py-2.5 text-[10px] font-semibold text-[#555555] whitespace-nowrap">{h} {h !== '操作' && '▲'}</th>
+                  <tr className={`bg-[#ECECEC] border-b ${DIVIDER}`}>
+                    {['标的信息', '交易对手', '结构', '状态', '开仓日 / 到期日', '名本', '平仓收益', '累计净收益', '操作'].map(h => (
+                      <th key={h} className="text-left px-3 py-2.5 text-[10px] font-semibold text-[#666] whitespace-nowrap">{h} {h !== '操作' && '▲'}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {[1,2,3,4,5,6].map(i => (
-                    <tr key={i} className="border-b border-[#D0D0D0]">
+                  {[1,2,3,4,5].map(i => (
+                    <tr key={i} className="border-b border-[#D0D0D0] hover:bg-[#F2F2F2]">
                       <td className="px-3 py-2.5">
-                        <div className={`h-3.5 rounded ${BLOCK} w-16 mb-1`} />
-                        <div className={`h-3 rounded ${BLOCK} w-20`} />
+                        <div className="h-3.5 rounded bg-[#D8D8D8] w-16 mb-1" />
+                        <div className="h-3 rounded bg-[#D8D8D8] w-20" />
                       </td>
-                      <td className="px-3 py-2.5"><div className={`h-5 rounded border ${BORDER} ${BLOCK} w-14`} /></td>
-                      <td className="px-3 py-2.5"><div className={`h-5 rounded border ${BORDER} ${BLOCK} w-14`} /></td>
-                      <td className="px-3 py-2.5"><div className={`h-5 rounded border ${BORDER} ${BLOCK} w-12`} /></td>
+                      <td className="px-3 py-2.5"><div className="h-5 rounded border border-[#B0B0B0] bg-[#D8D8D8] w-14" /></td>
+                      <td className="px-3 py-2.5"><div className="h-5 rounded border border-[#B0B0B0] bg-[#D8D8D8] w-14" /></td>
+                      <td className="px-3 py-2.5"><div className="h-5 rounded border border-[#B0B0B0] bg-[#D8D8D8] w-12" /></td>
                       <td className="px-3 py-2.5">
-                        <div className={`h-3 rounded ${BLOCK} w-16 mb-1`} />
-                        <div className={`h-3 rounded ${BLOCK} w-16`} />
+                        <div className="h-3 rounded bg-[#D8D8D8] w-16 mb-1" />
+                        <div className="h-3 rounded bg-[#D8D8D8] w-16" />
                       </td>
-                      <td className="px-3 py-2.5"><div className={`h-3.5 rounded ${BLOCK} w-16`} /></td>
-                      <td className="px-3 py-2.5"><div className={`h-3.5 rounded ${BLOCK} w-16`} /></td>
-                      <td className="px-3 py-2.5"><div className={`h-3.5 rounded ${BLOCK} w-16`} /></td>
-                      <td className="px-3 py-2.5"><span className="text-[#777777] text-[10px]">详情</span></td>
+                      <td className="px-3 py-2.5"><div className="h-3.5 rounded bg-[#D8D8D8] w-16" /></td>
+                      <td className="px-3 py-2.5"><div className="h-3.5 rounded bg-[#D8D8D8] w-16" /></td>
+                      <td className="px-3 py-2.5"><div className="h-3.5 rounded bg-[#D8D8D8] w-16" /></td>
+                      <td className="px-3 py-2.5"><span className="text-[#888] text-[10px]">详情</span></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className={`flex items-center justify-between px-4 py-2.5 border-t ${DIVIDER} text-[9px] text-[#777777]`}>
-              <span>共 X 条，第 1/N 页</span>
+            <div className={`flex items-center justify-between px-4 py-2.5 border-t ${DIVIDER} text-[9px] text-[#999]`}>
+              <span>共 N 条，第 1/N 页</span>
               <div className="flex gap-1">
                 {[1,2,3].map(p => (
-                  <span key={p} className={`w-5 h-5 rounded flex items-center justify-center text-[8px] ${p === 1 ? 'bg-[#C0C0C0] text-[#555555]' : `border ${BORDER} text-[#888888]`}`}>{p}</span>
+                  <span key={p} className={`w-5 h-5 rounded flex items-center justify-center text-[8px] ${p === 1 ? 'bg-[#C0C0C0] text-[#555]' : `border ${BORDER} text-[#999]`}`}>{p}</span>
                 ))}
               </div>
             </div>
+          </div>
 
-            {/* ===== 状态变体一览 ===== */}
-            <div className="mt-4 p-4 border border-dashed border-[#B0B0B0] rounded-lg">
-              <div className="text-[10px] font-semibold text-[#666666] mb-3">状态变体一览（供 UI 覆盖所有场景）</div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                  <div className="text-[9px] font-semibold text-[#555555] mb-2">状态列变体</div>
-                  <div className="space-y-1.5 text-[9px]">
-                    <div>已平仓：标签样式（普通视觉层级，不可操作）</div>
-                    <div>已到期：标签样式（需与已平仓有明确视觉区分）</div>
-                    <div>非亚丁 + 已平仓：标签可点击 → 弹出编辑弹窗 → 可切换回"未到期"（移回主列表）</div>
-                  </div>
+          {/* ===== 状态变体一览 ===== */}
+          <div className="p-4 border border-dashed border-[#B0B0B0] rounded-lg">
+            <div className="text-[10px] font-semibold text-[#666] mb-3">状态变体一览（供 UI 覆盖所有场景）</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="border border-[#B0B0B0] rounded p-3 bg-white">
+                <div className="text-[9px] font-semibold text-[#555] mb-2">状态列变体</div>
+                <div className="space-y-1.5 text-[9px] text-[#888]">
+                  <div>已平仓：灰色标签（普通视觉层级）</div>
+                  <div>已到期：黄色标签（需与已平仓有明确区分）</div>
                 </div>
-                <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                  <div className="text-[9px] font-semibold text-[#555555] mb-2">筛选与搜索</div>
-                  <div className="space-y-1.5 text-[9px]">
-                    <div>状态筛选标签：全部（默认）/ 已平仓 / 已到期 → 点击切换，当前选中需视觉强调</div>
-                    <div>搜索框：聚焦弹出建议列表（前8条），输入实时过滤</div>
-                    <div>筛选后表格实时更新，计数同步变化</div>
-                  </div>
+              </div>
+              <div className="border border-[#B0B0B0] rounded p-3 bg-white">
+                <div className="text-[9px] font-semibold text-[#555] mb-2">排序交互</div>
+                <div className="space-y-1.5 text-[9px] text-[#888]">
+                  <div>可排序列：标的信息/交易对手/结构/状态/开仓日到期日/名本/平仓收益/累计净收益</div>
+                  <div>点击列头 → 升序/降序切换 · 当前排序列显示▲/▼</div>
                 </div>
-                <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                  <div className="text-[9px] font-semibold text-[#555555] mb-2">排序交互</div>
-                  <div className="space-y-1.5 text-[9px]">
-                    <div>可排序列：标的信息/交易对手/结构/状态/开仓日到期日/名义本金/平仓收益/累计净收益</div>
-                    <div>点击列头 → 升序（首次）/ 降序（再次）/ 切换</div>
-                    <div>当前排序列显示 ▲ 或 ▼ 箭头指示器</div>
-                  </div>
+              </div>
+              <div className="border border-[#B0B0B0] rounded p-3 bg-white">
+                <div className="text-[9px] font-semibold text-[#555] mb-2">搜索与筛选</div>
+                <div className="space-y-1.5 text-[9px] text-[#888]">
+                  <div>搜索框：聚焦弹出建议列表（前8条）</div>
+                  <div>搜索无结果："无匹配结果"</div>
                 </div>
-                <div className="border border-[#B0B0B0] rounded p-3 bg-white">
-                  <div className="text-[9px] font-semibold text-[#555555] mb-2">其他状态</div>
-                  <div className="space-y-1.5 text-[9px]">
-                    <div>空状态：无历史持仓时，显示"暂无私幕纪录"提示</div>
-                    <div>搜索无结果：显示"无匹配结果"</div>
-                    <div>标的名称为可点击链接 → 跳转持仓详情页（/detail/:id）</div>
-                    <div>操作列"详情"链接 → 跳转持仓详情页</div>
-                  </div>
+              </div>
+              <div className="border border-[#B0B0B0] rounded p-3 bg-white">
+                <div className="text-[9px] font-semibold text-[#555] mb-2">空状态</div>
+                <div className="space-y-1.5 text-[9px] text-[#888]">
+                  <div>无历史持仓："暂无私幕纪录"</div>
+                  <div>搜索无结果："无匹配结果"</div>
+                  <div>标的名称为可点击链接 → /detail/:id</div>
+                  <div>操作列"详情"链接 → /detail/:id</div>
                 </div>
               </div>
             </div>

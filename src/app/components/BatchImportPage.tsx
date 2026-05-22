@@ -157,21 +157,11 @@ function generateMockImportData(): ImportRow[] {
     id++;
   }
 
-  // 注入错误/警告行（仅改字段值，校验由 validateRow 统一执行）
-  rows[3] = { ...rows[3], underlying: '不存在的标的', code: '999999.XZ' };
-  rows[7] = { ...rows[7], structure: '', openPrice: '' };
-  rows[11] = { ...rows[11], startDate: '2026-09-01', expiryDate: '2026-05-01' };
-  rows[15] = { ...rows[15], optionPremiumCNY: '999' };
-  rows[19] = { ...rows[19], strikePrice: '9999.99' };
-  rows[23] = { ...rows[23], counterparty: '' };
-  rows[27] = { ...rows[27], term: '', premiumRate: '' };
-  rows[31] = { ...rows[31], code: '600519.SH', underlying: '宁德时代' };
-  // 新警告示例
-  rows[0] = { ...rows[0], premiumRate: '25' };           // 费率 >20%
-  rows[5] = { ...rows[5], openNotionalCNY: '15000' };     // 名本 >1亿
-  rows[9] = { ...rows[9], structure: '130%' };            // 非标准结构
-  rows[13] = { ...rows[13], term: '6月', startDate: '2026-05-20', expiryDate: '2026-07-20' }; // 间隔不匹配
-  rows[17] = { ...rows[17], expiryDate: '2026-05-23' };   // 周六
+  // 注入错误/警告行
+  rows[3] = { ...rows[3], underlying: '不存在的标的', code: '999999.XZ' };        // 警告：标的未识别
+  rows[7] = { ...rows[7], structure: '', openPrice: '' };                         // 错误：必填为空
+  rows[23] = { ...rows[23], counterparty: '' };                                   // 错误：必填为空
+  rows[27] = { ...rows[27], term: '', premiumRate: '' };                          // 错误：必填为空
 
   return rows.map(validateRow);
 }
@@ -183,86 +173,19 @@ function validateRow(row: ImportRow): ImportRow {
   const errors: string[] = [];
   const warnings: string[] = [];
 
+  // 阻断：必填字段为空
   for (const field of REQUIRED_IMPORT_FIELDS) {
     if (!row[field]) {
       errors.push(`${FIELD_LABELS[field]}未填写`);
     }
   }
 
+  // 提醒：标的名或代码不在已知映射中
   if (row.underlying && !nameToCode[row.underlying]) {
-    errors.push('未识别的标的名称');
+    warnings.push('标的名称未识别，后续展示可能缺失数据');
   }
   if (row.code && !codeToName[row.code]) {
-    errors.push('未识别的标的代码');
-  }
-  if (row.underlying && row.code && nameToCode[row.underlying] && nameToCode[row.underlying] !== row.code) {
-    warnings.push('标的代码与名称不匹配');
-  }
-
-  if (row.startDate && row.expiryDate && row.startDate > row.expiryDate) {
-    errors.push('到期日早于开仓日');
-  }
-
-  // === 警告 ===
-
-  // 1. 期限与日期间隔不匹配（偏差>20%）
-  if (row.term && row.startDate && row.expiryDate) {
-    const { num, unit } = parseTerm(row.term);
-    const n = Number(num);
-    if (n > 0) {
-      const actualDays = Math.ceil((new Date(row.expiryDate).getTime() - new Date(row.startDate).getTime()) / 86400000);
-      const expectedDays = unit === '周' ? n * 7 : Math.round(n * 30.44);
-      const deviation = expectedDays > 0 ? Math.abs(actualDays - expectedDays) / expectedDays : 0;
-      if (deviation > 0.2) {
-        warnings.push(`期限与日期间隔不匹配（期限${row.term}，实际间隔约${actualDays}天）`);
-      }
-    }
-  }
-
-  // 2. 期权费率异常（<1% 或 >20%）
-  if (row.premiumRate) {
-    const rate = Number(row.premiumRate);
-    if (rate < 1 || rate > 20) {
-      warnings.push('期权费率异常，请确认填写正确');
-    }
-  }
-
-  // 3. 名本量级较大（>1亿万）
-  if (row.openNotionalCNY) {
-    const notional = Number(row.openNotionalCNY);
-    if (notional > 10000) {
-      warnings.push('开仓名本超过1亿，请确认量级正确');
-    }
-  }
-
-  // 4. 结构非标准
-  if (row.structure && !KNOWN_STRUCTURES.has(row.structure)) {
-    warnings.push('结构不在常见范围内，请确认');
-  }
-
-  // 5. 到期日为周末
-  if (row.expiryDate) {
-    const day = new Date(row.expiryDate).getDay();
-    if (day === 0 || day === 6) {
-      warnings.push('到期日为周末，请确认日期正确');
-    }
-  }
-
-  // 6. 期权费计算偏差
-  if (row.openNotionalCNY && row.premiumRate) {
-    const expected = Math.round(Number(row.openNotionalCNY) * 10000 * Number(row.premiumRate) / 100);
-    if (row.optionPremiumCNY && Math.abs(Number(row.optionPremiumCNY) - expected) > expected * 0.01) {
-      warnings.push('期权费与名本×费率计算结果偏差较大');
-    }
-  }
-
-  // 7. 执行价计算偏差
-  if (row.openPrice && row.structure) {
-    const pct = parseFloat(row.structure) / 100;
-    const expected = (Number(row.openPrice) * pct).toFixed(2);
-    if (row.strikePrice && Math.abs(Number(row.strikePrice) - Number(expected)) > 0.01) {
-      warnings.push('执行价与开仓价×结构比例偏差较大');
-    }
+    warnings.push('标的代码未识别，后续展示可能缺失数据');
   }
 
   const status = errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'ok';
@@ -500,17 +423,23 @@ export function BatchImportPage() {
     }
 
     if (!isEditing) {
+      const isRequired = REQUIRED_IMPORT_FIELDS.includes(field);
+      const isEmpty = !value;
+
       const display = (() => {
-        if (!value) return <span className="text-[#D1D5DB]">-</span>;
+        if (isEmpty && isRequired) return <span className="text-[#DC2626] font-medium">未填写</span>;
+        if (isEmpty) return <span className="text-[#D1D5DB]">-</span>;
         if (NUMERIC_FIELDS.includes(field)) return Number(value).toLocaleString();
         if (field === 'premiumRate') return `${value}%`;
-        if (field === 'openNotionalCNY') return `${Number(value).toLocaleString()}万`;
+        if (field === 'openNotionalCNY') return `${Number(value).toLocaleString()}万 CNY`;
         return value;
       })();
 
       return (
         <div
-          className="cursor-pointer hover:bg-[#EFF6FF] rounded px-1.5 py-1 -mx-1.5 transition-colors text-[11px] min-h-[22px] flex items-center whitespace-nowrap"
+          className={`cursor-pointer hover:bg-[#EFF6FF] rounded px-1.5 py-1 -mx-1.5 transition-colors text-[11px] min-h-[22px] flex items-center whitespace-nowrap ${
+            isEmpty && isRequired ? 'bg-[#FEF2F2] border border-[#FCA5A5]' : ''
+          }`}
           onClick={() => startEdit(id, field, value)}
           title="点击编辑"
         >
@@ -658,7 +587,7 @@ export function BatchImportPage() {
         <div className="flex-1 overflow-y-auto p-6">
           {/* ===== 上传区域 ===== */}
           {!rows && (
-            <div className="max-w-2xl mx-auto mt-16">
+            <div id="upload-area" data-anchor className="max-w-2xl mx-auto mt-16">
               <div
                 className="border-2 border-dashed border-[#D1D5DB] rounded-xl bg-white p-12 text-center hover:border-[#1677FF] hover:bg-[#F9FAFB] transition-colors cursor-pointer"
                 onClick={() => fileInputRef.current?.click()}
@@ -715,7 +644,7 @@ export function BatchImportPage() {
 
           {/* ===== 审核列表 ===== */}
           {rows && (
-            <div className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm overflow-hidden">
+            <div id="review-table" data-anchor className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm overflow-hidden">
               {/* 汇总条 */}
               <div className="flex items-center justify-between px-5 py-3 border-b border-[#F3F4F6] bg-[#F9FAFB]">
                 <div className="flex items-center gap-4">

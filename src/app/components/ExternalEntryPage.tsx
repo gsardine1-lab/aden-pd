@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, FileText, Search, Loader2, Check, X, Plus } from 'lucide-react';
 import { mockPositions } from './mockData';
@@ -350,6 +350,41 @@ export function ExternalEntryPage() {
   });
   const [newTag, setNewTag] = useState('');
 
+  // 交易对手历史
+  const [cptyHistory, setCptyHistory] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('cptyHistory');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    const defaults = ['银河证券', '中信证券', '华泰证券', '国泰君安', '招商证券', '广发证券', '中金公司', '海通证券'];
+    localStorage.setItem('cptyHistory', JSON.stringify(defaults));
+    return defaults;
+  });
+  const [cptyOpen, setCptyOpen] = useState(false);
+  const cptyRef = useRef<HTMLDivElement>(null);
+
+  const filteredCpty = useMemo(() => {
+    if (!form.counterparty) return cptyHistory.slice(0, 5);
+    const s = form.counterparty.toLowerCase();
+    return cptyHistory.filter(c => c.toLowerCase().includes(s)).slice(0, 5);
+  }, [form.counterparty, cptyHistory]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (cptyRef.current && !cptyRef.current.contains(e.target as Node)) setCptyOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const saveCptyToHistory = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const next = [trimmed, ...cptyHistory.filter(c => c !== trimmed)];
+    setCptyHistory(next);
+    localStorage.setItem('cptyHistory', JSON.stringify(next));
+  };
+
   const set = (partial: Partial<EntryForm>) => setForm(prev => ({ ...prev, ...partial }));
 
   // 标的名称与代码联动
@@ -483,6 +518,7 @@ export function ExternalEntryPage() {
       list.push(entry);
       localStorage.setItem('externalPositions', JSON.stringify(list));
     } catch {}
+    saveCptyToHistory(form.counterparty);
     alert(`持仓已录入\n标的: ${form.underlying}\n代码: ${form.code}\n名本: ${form.notionalCNY}万`);
     navigate('/');
   };
@@ -499,6 +535,53 @@ export function ExternalEntryPage() {
     };
   }, [form]);
 
+  function RuleNotesEditor() {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(form.ruleNotes);
+    const hasContent = !!form.ruleNotes;
+
+    const commit = () => { set({ ruleNotes: draft }); setEditing(false); };
+
+    if (!hasContent && !editing) {
+      return (
+        <textarea
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onFocus={() => setEditing(true)}
+          placeholder="备注内容..."
+          className="w-full text-[11px] border border-[#D1D5DB] rounded px-2 py-1.5 focus:outline-none focus:border-[#1677FF] resize-none"
+          rows={5}
+        />
+      );
+    }
+
+    if (editing) {
+      return (
+        <div>
+          <textarea
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            placeholder="备注内容..."
+            className="w-full text-[11px] border border-[#1677FF] rounded px-2 py-1.5 focus:outline-none resize-none bg-white"
+            rows={5}
+            autoFocus
+          />
+          <div className="flex items-center gap-2 mt-1">
+            <button onClick={commit} className="text-[10px] px-3 py-1 rounded bg-[#1677FF] text-white hover:bg-[#0E5FCC] transition-colors">确认</button>
+            <button onClick={() => { setDraft(form.ruleNotes); setEditing(false); }} className="text-[10px] px-3 py-1 rounded border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F9FAFB] transition-colors">取消</button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <p
+        className="text-[11px] text-[#0D1117] leading-relaxed whitespace-pre-wrap cursor-pointer hover:bg-[#EFF6FF] rounded px-1.5 py-1 -mx-1.5 transition-colors border-b border-dashed border-transparent hover:border-[#1677FF]"
+        onClick={() => { setDraft(form.ruleNotes); setEditing(true); }}
+      >{form.ruleNotes}</p>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-[#F0F2F5] overflow-hidden" style={{ minWidth: '1280px' }}>
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -513,7 +596,7 @@ export function ExternalEntryPage() {
         {/* 双栏主内容 */}
         <div className="flex-1 flex overflow-hidden">
           {/* ===== 左栏：粘贴文本 ===== */}
-          <div className="w-[420px] flex-shrink-0 border-r border-[#E8ECF0] bg-white flex flex-col">
+          <div id="text-parser" data-anchor className="w-[420px] flex-shrink-0 border-r border-[#E8ECF0] bg-white flex flex-col">
             <div className="px-4 pt-4 pb-2">
               <h1 className="text-base font-bold text-[#0D1117]">录入外部持仓</h1>
               <p className="text-[10px] text-[#9CA3AF] mt-0.5">粘贴期权确认书或交易流水，自动提取结构化数据；也可直接在右侧确认板填写</p>
@@ -538,7 +621,7 @@ export function ExternalEntryPage() {
           </div>
 
           {/* ===== 右栏：确认板（始终可见，点击可编辑） ===== */}
-          <div className="flex-1 flex flex-col overflow-hidden bg-[#F8FAFC]">
+          <div id="external-entry-form" data-anchor className="flex-1 flex flex-col overflow-hidden bg-[#F8FAFC]">
             <div className="flex-1 overflow-y-auto p-4">
               <div className="min-h-full flex flex-col">
                 <div className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm overflow-hidden flex flex-col flex-1">
@@ -556,32 +639,86 @@ export function ExternalEntryPage() {
                     <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#EFF6FF] text-[#1677FF]">{form.structure ? `${form.structure} Call` : '结构'}</span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#FEF2F2] text-[#DC2626]">看涨期权</span>
                     <span className="px-2 py-0.5 rounded text-[10px] bg-[#F3F4F6] text-[#6B7280]">{form.term || '期限'}</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#F0FDF4] text-[#15803D]">{form.counterparty || '交易对手'}</span>
+                  </div>
+                </div>
+
+                {/* 交易对手 + 标签 — 同行 */}
+                <div className="px-4 py-2.5 border-b border-[#F3F4F6] flex-shrink-0 flex items-center gap-6" ref={cptyRef}>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className="text-[11px] font-semibold text-[#6B7280]">交易对手</span>
+                    <div className="relative w-[200px]">
+                      <input
+                        type="text"
+                        value={form.counterparty}
+                        onChange={v => { set({ counterparty: v.target.value }); setCptyOpen(true); }}
+                        onFocus={() => setCptyOpen(true)}
+                        placeholder="例：银河证券"
+                        className={`w-full text-[13px] border rounded-md px-3 py-1.5 focus:outline-none transition-colors ${flashFields.includes('counterparty') ? 'border-[#E53935] bg-[#FFF5F5]' : 'border-[#D1D5DB] focus:border-[#1677FF]'}`}
+                      />
+                      {cptyOpen && filteredCpty.length > 0 && (
+                        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-[#E8ECF0] rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          {filteredCpty.map((c, i) => (
+                            <div
+                              key={i}
+                              className="px-3 py-2 text-[12px] text-[#374151] hover:bg-[#F9FAFB] cursor-pointer flex items-center justify-between"
+                              onClick={() => { set({ counterparty: c }); setCptyOpen(false); }}
+                            >
+                              <span>{c}</span>
+                              <span className="text-[9px] text-[#9CA3AF]">历史</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {cptyOpen && form.counterparty && filteredCpty.length === 0 && (
+                        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-[#E8ECF0] rounded-lg shadow-lg px-3 py-2 text-[11px] text-[#9CA3AF] text-center">无历史记录</div>
+                      )}
+                    </div>
+                    {form.counterparty && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]">{form.counterparty}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 flex items-center gap-2 flex-wrap min-w-0">
+                    <span className="text-[11px] font-semibold text-[#6B7280] flex-shrink-0">标签</span>
+                    {form.tags.map(tag => (
+                      <span key={tag} onClick={() => toggleTag(tag)} className="text-[10px] px-2 py-1 rounded font-medium border bg-[#1677FF] text-white border-[#1677FF] cursor-pointer select-none">{tag} &times;</span>
+                    ))}
+                    {availableTags.map(tag => (
+                      <span key={tag} onClick={() => toggleTag(tag)} className="text-[10px] px-2 py-1 rounded border bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#1677FF] hover:text-[#1677FF] cursor-pointer select-none">{tag}</span>
+                    ))}
+                    <div className="flex items-center gap-1">
+                      <input type="text" value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addTag(); }}
+                        placeholder="新标签" className="text-[11px] border border-[#E5E7EB] rounded px-2 py-1.5 w-20 focus:outline-none focus:border-[#1677FF]" />
+                      <button onClick={addTag} className="text-[10px] px-2 py-1 rounded bg-[#1677FF] text-white hover:bg-[#0E5FCC] flex items-center gap-0.5"><Plus size={12} />新建</button>
+                    </div>
                   </div>
                 </div>
 
                 {/* 三列字段 */}
                 <div className="grid grid-cols-3 divide-x divide-[#F3F4F6] flex-1">
-                  {/* 列1：基本信息 + 时间 */}
-                  <div className="p-4 flex flex-col justify-between">
+                  {/* 列1：标的 → 结构 → 期限 */}
+                  <div className="p-4 flex flex-col gap-6">
                     <div>
-                      <SectionTitle label="基本信息" />
+                      <SectionTitle label="标的" />
                       <div className="space-y-2 mt-2">
                         <EditableField label="标的名称" value={form.underlying} onChange={v => set({ underlying: v })} required placeholder="例：贵州茅台" flash={flashFields.includes('underlying') || stockInvalid} />
                         <EditableField label="标的代码" value={form.code} onChange={v => set({ code: v })} required placeholder="例：600519.SH" flash={flashFields.includes('code') || stockInvalid} />
                         {stockInvalid && (
                           <div className="text-[10px] text-[#E53935] leading-relaxed">未识别该标的，请输入正确的标的名称或代码</div>
                         )}
+                      </div>
+                    </div>
+                    <div>
+                      <SectionTitle label="结构" />
+                      <div className="space-y-2 mt-2">
                         <StructureField value={form.structure} onChange={v => set({ structure: v })} flash={flashFields.includes('structure')} />
                         <div className="flex items-center text-[12px] py-2.5">
                           <span className="text-[#9CA3AF] flex-shrink-0 w-[72px]">交易类型</span>
                           <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#F3F4F6] text-[#6B7280] ml-auto">Call 看涨期权</span>
                         </div>
-                        <EditableField label="交易对手" value={form.counterparty} onChange={v => set({ counterparty: v })} required placeholder="例：银河证券" flash={flashFields.includes('counterparty')} />
                       </div>
                     </div>
                     <div>
-                      <SectionTitle label="时间信息" />
+                      <SectionTitle label="期限" />
                       <div className="space-y-2 mt-2">
                         <EditableTermField value={form.term} onChange={v => { set({ term: v }); applyTermToDates(v); }} flash={flashFields.includes('term')} />
                         <EditableField label="开仓日" value={form.startDate} onChange={v => set({ startDate: v })} type="date" required flash={flashFields.includes('startDate')} />
@@ -596,43 +733,33 @@ export function ExternalEntryPage() {
                     </div>
                   </div>
 
-                  {/* 列2：本金与价格 */}
-                  <div className="p-4">
-                    <SectionTitle label="本金与价格" />
-                    <div className="space-y-2 mt-2">
-                      <EditableField label="开仓名本" value={form.openNotionalCNY} onChange={v => set({ openNotionalCNY: v })} suffix="万" required placeholder="例：500" flash={flashFields.includes('openNotionalCNY')} quickFills={[{ label: '100万', value: '100' }, { label: '500万', value: '500' }, { label: '1000万', value: '1000' }]} />
-                      <EditableField label="开仓价" value={form.openPrice} onChange={v => set({ openPrice: v })} required placeholder="例：1620" flash={flashFields.includes('openPrice')} />
-                      <EditableField label="期权数量" value={form.optionQty} onChange={v => set({ optionQty: v })} required placeholder="名本÷开仓价自动计算" flash={flashFields.includes('optionQty')} />
-                      <EditableField label="期权费率" value={form.premiumRate} onChange={v => set({ premiumRate: v })} required suffix="%" placeholder="例：7" flash={flashFields.includes('premiumRate')} />
-                      {form.optionPremiumCNY && (
-                        <div className="flex justify-between text-[12px]"><span className="text-[#9CA3AF]"><span className="text-[#E53935] mr-0.5">*</span>期权费</span><span className="font-medium text-[#0D1117]">{Number(form.optionPremiumCNY).toLocaleString()}</span></div>
-                      )}
-                      <div className="flex items-center text-[12px] py-2.5"><span className="text-[#9CA3AF] flex-shrink-0 w-[72px]"><span className="text-[#E53935] mr-0.5">*</span>执行价</span><span className="font-medium text-[#0D1117] flex-1 text-right">{form.strikePrice || '-'}</span></div>
-                      <div className="text-[9px] text-[#B0B7C3]">由开仓价 × 结构比例自动计算</div>
+                  {/* 列2：本金与费用 → 价格 */}
+                  <div className="p-4 flex flex-col gap-6">
+                    <div>
+                      <SectionTitle label="名本" />
+                      <div className="space-y-2 mt-2">
+                        <EditableField label="开仓名本" value={form.openNotionalCNY} onChange={v => set({ openNotionalCNY: v })} suffix="万 CNY" required placeholder="例：500" flash={flashFields.includes('openNotionalCNY')} quickFills={[{ label: '100万', value: '100' }, { label: '500万', value: '500' }, { label: '1000万', value: '1000' }]} />
+                        <EditableField label="期权费率" value={form.premiumRate} onChange={v => set({ premiumRate: v })} required suffix="%" placeholder="例：7" flash={flashFields.includes('premiumRate')} />
+                        {form.optionPremiumCNY && (
+                          <div className="flex justify-between text-[12px]"><span className="text-[#9CA3AF]"><span className="text-[#E53935] mr-0.5">*</span>期权费</span><span className="font-medium text-[#0D1117]">{Number(form.optionPremiumCNY).toLocaleString()}</span></div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <SectionTitle label="价格" />
+                      <div className="space-y-2 mt-2">
+                        <EditableField label="开仓价" value={form.openPrice} onChange={v => set({ openPrice: v })} required placeholder="例：1620" flash={flashFields.includes('openPrice')} />
+                        <div className="flex items-center text-[12px] py-2.5"><span className="text-[#9CA3AF] flex-shrink-0 w-[72px]"><span className="text-[#E53935] mr-0.5">*</span>执行价</span><span className="font-medium text-[#0D1117] flex-1 text-right">{form.strikePrice || '-'}</span></div>
+                        <div className="text-[9px] text-[#B0B7C3]">由开仓价 × 结构比例自动计算</div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* 列3：备注 + 标签 */}
+                  {/* 列3：备注 */}
                   <div className="p-4">
                     <SectionTitle label="备注" />
                     <div className="mt-2">
-                      <EditableField label="备注" value={form.ruleNotes} onChange={v => set({ ruleNotes: v })} type="textarea" placeholder="备注内容..." />
-                    </div>
-                    <div className="mt-6 space-y-1.5">
-                      <SectionTitle label="标签" />
-                      <div className="flex flex-wrap gap-1">
-                        {form.tags.map(tag => (
-                          <span key={tag} onClick={() => toggleTag(tag)} className="text-[9px] px-1.5 py-0.5 rounded font-medium border bg-[#1677FF] text-white border-[#1677FF] cursor-pointer select-none">{tag} &times;</span>
-                        ))}
-                        {availableTags.map(tag => (
-                          <span key={tag} onClick={() => toggleTag(tag)} className="text-[9px] px-1.5 py-0.5 rounded border bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#1677FF] hover:text-[#1677FF] cursor-pointer select-none">{tag}</span>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-1 pt-1">
-                        <input type="text" value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addTag(); }}
-                          placeholder="新标签" className="text-[10px] border border-[#E5E7EB] rounded px-2 py-1 w-24 focus:outline-none focus:border-[#1677FF]" />
-                        <button onClick={addTag} className="text-[9px] px-2 py-1 rounded bg-[#1677FF] text-white hover:bg-[#0E5FCC] flex items-center gap-0.5"><Plus size={10} />新建</button>
-                      </div>
+                      <RuleNotesEditor />
                     </div>
                   </div>
                 </div>
