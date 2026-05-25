@@ -278,8 +278,6 @@ export function WireframePage() {
                 <div className="text-[9px] font-semibold text-[#666] mb-2">交易对手 = 非亚丁（仅 Call 看涨期权）</div>
                 <div className="space-y-2">
                   {[
-                    { status: '盈利（可行权但非亚丁不显示）', ui: '盈利', emphasis: '不可操作标签' },
-                    { status: '亏损（可行权但非亚丁不显示）', ui: '亏损', emphasis: '不可操作标签' },
                     { status: '未到期', ui: '手动平仓（蓝）', emphasis: '最高强调 — 可操作按钮' },
                     { status: '已到期', ui: '已到期（黄）+ 手动平仓（蓝）', emphasis: '双标签：状态 + 操作' },
                     { status: '已平仓', ui: '已平仓（灰）', emphasis: '不可操作标签' },
