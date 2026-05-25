@@ -260,7 +260,7 @@ export function WireframePage() {
                 <div className="space-y-2">
                   {[
                     { status: '盈利 + 可行权', ui: '申请行权（红）', emphasis: '最高强调 — 可操作按钮' },
-                    { status: '亏损 + 可行权', ui: '申请行权（灰）', emphasis: '中等强调 — 可操作按钮' },
+                    { status: '亏损 + 可行权', ui: '申请行权（红）', emphasis: '最高强调 — 可操作按钮' },
                     { status: '未到可行权日（不在行权窗口）', ui: '未到可行权日（灰）', emphasis: '不可操作标签' },
                     { status: '已平仓', ui: '已平仓（灰）', emphasis: '不可操作标签' },
                   ].map(v => (
