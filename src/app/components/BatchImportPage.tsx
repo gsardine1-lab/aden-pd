@@ -56,7 +56,7 @@ const REQUIRED_IMPORT_FIELDS: ImportField[] = [
 const TABLE_COLUMNS: ImportField[] = [
   'underlying', 'code', 'currency', 'counterparty', 'structure', 'term',
   'startDate', 'expiryDate', 'openNotionalCNY', 'openPrice', 'strikePrice',
-  'premiumRate', 'optionPremiumCNY', 'optionQty',
+  'premiumRate', 'optionPremiumCNY',
 ];
 
 const COLUMN_WIDTHS: Partial<Record<ImportField, number>> = {
@@ -201,6 +201,7 @@ export function BatchImportPage() {
   const [fileName, setFileName] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'error' | 'warning' | 'ok'>('all');
   const [search, setSearch] = useState('');
+  const [counterpartyFilter, setCounterpartyFilter] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<{ id: number; field: ImportField } | null>(null);
   const [editValue, setEditValue] = useState('');
   const [editUnit, setEditUnit] = useState('月');
@@ -241,19 +242,39 @@ export function BatchImportPage() {
     };
   }, [rows]);
 
+  const aggregateStats = useMemo(() => {
+    if (!rows) return null;
+    const byCounterparty: Record<string, { count: number; notional: number; premium: number }> = {};
+    let totalNotional = 0;
+    let totalPremium = 0;
+    rows.forEach(r => {
+      const cp = r.counterparty || '未填写';
+      if (!byCounterparty[cp]) byCounterparty[cp] = { count: 0, notional: 0, premium: 0 };
+      byCounterparty[cp].count++;
+      const n = Number(r.openNotionalCNY) || 0;
+      const p = Number(r.optionPremiumCNY) || 0;
+      byCounterparty[cp].notional += n;
+      byCounterparty[cp].premium += p;
+      totalNotional += n;
+      totalPremium += p;
+    });
+    return { totalNotional, totalPremium, counterpartyCount: Object.keys(byCounterparty).length, totalCount: rows.length, byCounterparty };
+  }, [rows]);
+
   const filtered = useMemo(() => {
     if (!rows) return [];
     return rows.filter(r => {
       if (statusFilter === 'error' && r.status !== 'error') return false;
       if (statusFilter === 'warning' && r.status !== 'warning') return false;
       if (statusFilter === 'ok' && r.status !== 'ok') return false;
+      if (counterpartyFilter && r.counterparty !== counterpartyFilter) return false;
       if (search) {
         const s = search.toLowerCase();
         if (!r.underlying.includes(search) && !r.code.toLowerCase().includes(s) && !r.counterparty.includes(search)) return false;
       }
       return true;
     });
-  }, [rows, statusFilter, search]);
+  }, [rows, statusFilter, search, counterpartyFilter]);
 
   // 开始编辑单元格
   const startEdit = (id: number, field: ImportField, currentValue: string) => {
@@ -534,17 +555,17 @@ export function BatchImportPage() {
     const headers = [
       '标的名称', '标的代码', '交易对手', '结构', '期限(数字)', '期限单位(周/月)',
       '开仓日', '到期日', '开仓名本(万)', '开仓价', '执行价',
-      '期权费率(%)', '期权费', '期权数量',
+      '期权费率(%)', '期权费',
     ];
     const sampleRow1 = [
       '贵州茅台', '600519.SH', '银河证券', '100%', '6', '月',
       '2026-05-20', '2026-11-20', '500', '1620', '1620',
-      '5', '250000', '3086',
+      '5', '250000',
     ];
     const sampleRow2 = [
       '宁德时代', '300750.SZ', '中信证券', '103%', '2', '周',
       '2026-05-20', '2026-06-03', '300', '285', '293.55',
-      '3', '90000', '10526',
+      '3', '90000',
     ];
     const csv = [headers.join(','), sampleRow1.join(','), sampleRow2.join(',')].join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=UTF-8' });
@@ -610,7 +631,7 @@ export function BatchImportPage() {
               </div>
 
               <div className="mt-4 flex items-center justify-between text-xs text-[#9CA3AF]">
-                <span>导入字段：标的名称、标的代码、交易对手、结构、期限、开仓日、到期日、开仓名本(万)、开仓价、执行价、期权费率、期权费、期权数量</span>
+                <span>导入字段：标的名称、标的代码、交易对手、结构、期限、开仓日、到期日、开仓名本(万)、开仓价、执行价、期权费率、期权费</span>
                 <button
                   onClick={handleDownloadTemplate}
                   className="flex items-center gap-1 text-[#1677FF] hover:text-[#0E5FCC] font-medium flex-shrink-0 ml-4"
@@ -646,33 +667,41 @@ export function BatchImportPage() {
           {rows && (
             <div id="review-table" data-anchor className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm overflow-hidden">
               {/* 汇总条 */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-[#F3F4F6] bg-[#F9FAFB]">
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold text-[#0D1117]">
-                    {fileName} — 共解析 {stats.total} 条
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1 text-[11px] text-[#059669]">
-                      <CheckCircle2 size={12} />{stats.ok} 正常
+              <div className="px-5 py-3 border-b border-[#F3F4F6] bg-[#F9FAFB]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-semibold text-[#0D1117]">
+                      {fileName} — 共解析 {stats.total} 条
                     </span>
-                    {stats.warnings > 0 && (
-                      <span className="flex items-center gap-1 text-[11px] text-[#D97706]">
-                        <AlertTriangle size={12} />{stats.warnings} 警告
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 text-[11px] text-[#059669]">
+                        <CheckCircle2 size={12} />{stats.ok} 正常
                       </span>
-                    )}
-                    {stats.errors > 0 && (
-                      <span className="flex items-center gap-1 text-[11px] text-[#DC2626]">
-                        <XCircle size={12} />{stats.errors} 错误
-                      </span>
-                    )}
+                      {stats.warnings > 0 && (
+                        <span className="flex items-center gap-1 text-[11px] text-[#D97706]">
+                          <AlertTriangle size={12} />{stats.warnings} 警告
+                        </span>
+                      )}
+                      {stats.errors > 0 && (
+                        <span className="flex items-center gap-1 text-[11px] text-[#DC2626]">
+                          <XCircle size={12} />{stats.errors} 错误
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <button
+                    onClick={() => { setRows(null); setFileName(''); setCounterpartyFilter(null); }}
+                    className="text-xs text-[#6B7280] hover:text-[#374151] underline"
+                  >
+                    重新上传
+                  </button>
                 </div>
-                <button
-                  onClick={() => { setRows(null); setFileName(''); }}
-                  className="text-xs text-[#6B7280] hover:text-[#374151] underline"
-                >
-                  重新上传
-                </button>
+                <div className="flex items-center gap-2 mt-1.5 text-[11px] text-[#6B7280]">
+                  <span>{stats.ok + stats.warnings} 条可导入</span>
+                  {stats.errors > 0 && (
+                    <span className="text-[#DC2626]">— 异常数据将在导入时跳过</span>
+                  )}
+                </div>
               </div>
 
               {/* 筛选栏 */}
@@ -711,6 +740,98 @@ export function BatchImportPage() {
                   />
                 </div>
               </div>
+
+              {/* 聚合看板 */}
+              {aggregateStats && (
+                <div className="px-5 py-4 border-b border-[#F3F4F6] bg-[#F9FAFB]">
+                  <div className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm overflow-hidden">
+                    {/* 看板头部 */}
+                    <div className="px-5 py-3 border-b border-[#F3F4F6] bg-[#FAFBFC]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-[#0D1117]">录入概览</span>
+                        <span className="text-[10px] text-[#9CA3AF]">— 快速校验录入数据</span>
+                      </div>
+                    </div>
+
+                    {/* 汇总指标 */}
+                    <div className="px-5 py-4">
+                      <div className="grid grid-cols-4 gap-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] text-[#9CA3AF]">总名本</span>
+                          <span className="text-base font-bold text-[#0D1117] tracking-tight">{aggregateStats.totalNotional.toLocaleString()}<span className="text-xs font-normal text-[#9CA3AF] ml-1">万 CNY</span></span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] text-[#9CA3AF]">总期权费</span>
+                          <span className="text-base font-bold text-[#0D1117] tracking-tight">{aggregateStats.totalPremium.toLocaleString()}<span className="text-xs font-normal text-[#9CA3AF] ml-1">CNY</span></span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] text-[#9CA3AF]">总持仓数</span>
+                          <span className="text-base font-bold text-[#0D1117] tracking-tight">{aggregateStats.totalCount} <span className="text-xs font-normal text-[#9CA3AF]">笔</span></span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] text-[#9CA3AF]">涉及机构</span>
+                          <span className="text-base font-bold text-[#0D1117] tracking-tight">{aggregateStats.counterpartyCount} <span className="text-xs font-normal text-[#9CA3AF]">家</span></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 按交易对手拆分 */}
+                    <div className="border-t border-[#F3F4F6]">
+                      <div className="px-5 py-2 bg-[#FAFBFC]">
+                        <span className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">按交易对手</span>
+                      </div>
+                      <div className="px-5 pb-4">
+                        <table className="w-full table-fixed text-[11px]">
+                          <thead>
+                            <tr className="border-b border-[#F3F4F6]">
+                              <th className="text-left py-2 text-[10px] font-medium text-[#9CA3AF] w-[28%]">交易对手</th>
+                              <th className="text-right py-2 text-[10px] font-medium text-[#9CA3AF] w-[16%]">笔数</th>
+                              <th className="text-right py-2 text-[10px] font-medium text-[#9CA3AF] w-[28%]">名本合计(万)</th>
+                              <th className="text-right py-2 text-[10px] font-medium text-[#9CA3AF] w-[28%]">期权费合计</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(aggregateStats.byCounterparty)
+                              .sort(([, a], [, b]) => b.notional - a.notional)
+                              .map(([cp, info]) => (
+                                <tr key={cp} className={`border-b border-[#F3F4F6] last:border-b-0 hover:bg-[#F9FAFB] ${counterpartyFilter === cp ? 'bg-[#EFF6FF]' : ''}`}>
+                                  <td className="py-2">
+                                    <button
+                                      onClick={() => setCounterpartyFilter(counterpartyFilter === cp ? null : cp)}
+                                      className={`text-left font-medium transition-colors hover:text-[#1677FF] ${counterpartyFilter === cp ? 'text-[#1677FF]' : 'text-[#374151]'}`}
+                                    >
+                                      {cp}
+                                    </button>
+                                  </td>
+                                  <td className="py-2 text-right text-[#6B7280]">{info.count} 笔</td>
+                                  <td className="py-2 text-right text-[#374151] tabular-nums">{info.notional.toLocaleString()}万</td>
+                                  <td className="py-2 text-right text-[#374151] tabular-nums">{info.premium.toLocaleString()}</td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 筛选指示条 */}
+              {counterpartyFilter && (
+                <div className="flex items-center justify-between px-5 py-2 border-b border-[#F3F4F6] bg-[#EFF6FF]">
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <span className="text-[#6B7280]">已筛选：</span>
+                    <span className="font-semibold text-[#1677FF]">{counterpartyFilter}</span>
+                    <span className="text-[#6B7280]">— {filtered.length} 条</span>
+                  </div>
+                  <button
+                    onClick={() => setCounterpartyFilter(null)}
+                    className="text-[11px] text-[#1677FF] hover:text-[#0E5FCC] font-medium"
+                  >
+                    清空筛选
+                  </button>
+                </div>
+              )}
 
               {/* 表格 */}
               <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 340px)' }}>
@@ -787,19 +908,10 @@ export function BatchImportPage() {
               </div>
 
               {/* 底部操作栏 */}
-              <div className="flex items-center justify-between px-5 py-3 border-t border-[#F3F4F6] bg-white">
-                <div className="text-[11px] text-[#6B7280]">
-                  {statusFilter === 'all' && `共 ${filtered.length} 条，其中 ${stats.ok + stats.warnings} 条可导入`}
-                  {statusFilter === 'error' && `${stats.errors} 条异常需修正`}
-                  {statusFilter === 'warning' && `${stats.warnings} 条有警告，可确认后导入`}
-                  {statusFilter === 'ok' && `${stats.ok} 条就绪待导入`}
-                  {stats.errors > 0 && statusFilter === 'all' && (
-                    <span className="text-[#DC2626] ml-2">— 异常数据将在导入时跳过</span>
-                  )}
-                </div>
+              <div className="flex items-center justify-end px-5 py-3 border-t border-[#F3F4F6] bg-white">
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => { setRows(null); setFileName(''); }}
+                    onClick={() => { setRows(null); setFileName(''); setCounterpartyFilter(null); }}
                     className="px-5 py-2 text-xs font-medium text-[#6B7280] bg-white border border-[#E5E7EB] rounded-lg hover:bg-[#F9FAFB] transition-colors"
                   >
                     取消

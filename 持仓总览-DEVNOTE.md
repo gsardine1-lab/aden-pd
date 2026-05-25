@@ -251,7 +251,7 @@ const FX_RATES = { CNY: 1, USD: 7.23, HKD: 0.927 };
 | 字段编辑 | 不可编辑（只读） | 可编辑（EditableValue 组件） |
 | StatusBadge | not-expired→「未到可行权日」(灰) | not-expired→「手动平仓」(蓝) |
 | StatusBadge | profitable-exercisable→「申请行权」(红) | profitable-exercisable→「盈利」(灰) |
-| StatusBadge | loss-exercisable→「申请行权」(灰) | loss-exercisable→「亏损」(灰) |
+| StatusBadge | loss-exercisable→「申请行权」(红) | loss-exercisable→「亏损」(灰) |
 
 ### 4.2 applyFilters 核心过滤逻辑
 

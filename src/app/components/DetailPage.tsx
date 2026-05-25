@@ -1027,11 +1027,7 @@ export function DetailPage() {
                 <>
                   <span className="px-2 py-1 rounded text-[10px] font-medium bg-[#EFF6FF] text-[#1677FF] border border-[#1677FF]/20">亚丁</span>
                   {(position.status === 'profitable-exercisable' || position.status === 'loss-exercisable') && (
-                    <button className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      position.status === 'profitable-exercisable'
-                        ? 'bg-[#E53935] text-white hover:bg-[#C62828]'
-                        : 'bg-[#E5E7EB] text-[#6B7280] hover:bg-[#D1D5DB]'
-                    }`}>
+                    <button className="px-4 py-1.5 rounded-lg text-xs font-medium transition-colors bg-[#E53935] text-white hover:bg-[#C62828]">
                       申请行权
                     </button>
                   )}

@@ -99,9 +99,13 @@ export function applyFilters(positions: Position[], filters: FilterState): Posit
       if (p.returnRate >= Number(filters.returnRateMax)) return false;
     }
     if (filters.pnlRange) {
-      if (filters.pnlRange === 'loss' && p.pnlCNY >= 0) return false;
-      else if (filters.pnlRange === 'profit' && p.pnlCNY <= 0) return false;
-      else if (filters.pnlRange === 'flat' && (p.pnlCNY < -1000 || p.pnlCNY > 1000)) return false;
+      const pnl = p.pnlCNY;
+      if (filters.pnlRange === 'loss-30w+' && pnl > -300000) return false;
+      else if (filters.pnlRange === 'loss-10-30w' && (pnl <= -300000 || pnl > -100000)) return false;
+      else if (filters.pnlRange === 'loss-0-10w' && (pnl <= -100000 || pnl >= 0)) return false;
+      else if (filters.pnlRange === 'profit-0-10w' && (pnl < 0 || pnl >= 100000)) return false;
+      else if (filters.pnlRange === 'profit-10-30w' && (pnl < 100000 || pnl >= 300000)) return false;
+      else if (filters.pnlRange === 'profit-30w+' && pnl < 300000) return false;
     }
     if (filters.tags) {
       const selectedTags = filters.tags.split(',').filter(Boolean);
@@ -188,20 +192,12 @@ export function HighFidelityPage() {
         <div className="flex items-center justify-between px-6 h-14 bg-white border-b border-[#E8ECF0] flex-shrink-0">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-bold text-[#0D1117]">持仓总览</h1>
-            <div className="flex items-center bg-[#F3F4F6] rounded-lg p-0.5 gap-0.5">
-              <Link
-                to="/wireframe"
-                className="text-[11px] font-medium text-[#6B7280] hover:text-[#0D1117] px-3 py-1 rounded-md transition-all hover:bg-white hover:shadow-sm"
-              >
-                原型线框图
-              </Link>
-              <Link
-                to="/prd"
-                className="text-[11px] font-medium text-[#6B7280] hover:text-[#0D1117] px-3 py-1 rounded-md transition-all hover:bg-white hover:shadow-sm"
-              >
-                PRD
-              </Link>
-            </div>
+            <Link
+              to="/wireframe"
+              className="text-[11px] font-medium text-[#6B7280] hover:text-[#0D1117] px-3 py-1 rounded-md transition-all hover:bg-[#F3F4F6]"
+            >
+              原型线框图
+            </Link>
           </div>
           <div className="flex items-center gap-2">
             {/* 已实现损益总额 — 点击进历史持仓 */}

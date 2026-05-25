@@ -335,7 +335,7 @@ export function WireframeDetailPage() {
                 <div className="space-y-1.5 text-[9px] text-[#888]">
                   <div>亚丁：显示交易规则详情（行权/到期/敲出/分红）</div>
                   <div>非亚丁：不显示交易规则区块</div>
-                  <div>亚丁：底部"申请行权"按钮（红/灰）</div>
+                  <div>亚丁：底部"申请行权"按钮（红）</div>
                   <div>非亚丁：底部"手动平仓"按钮（蓝）</div>
                   <div>非亚丁：开仓/行权事件无 orderId</div>
                   <div>亚丁：关键事件含除权除息+分红调整</div>
@@ -636,16 +636,19 @@ export function WireframeBatchImportPage() {
             </div>
             <div className={`bg-white border ${BORDER} rounded-lg overflow-hidden`}>
               {/* 汇总条 */}
-              <div className={`flex items-center justify-between px-4 py-2.5 border-b ${DIVIDER} bg-[#F5F5F5]`}>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold text-[#555]">文件名.xlsx — 共解析 35 条</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[11px] text-[#888]">✓ 30 正常</span>
-                    <span className="text-[11px] text-[#888]">△ 2 警告</span>
-                    <span className="text-[11px] text-[#C62828]">✕ 3 错误</span>
+              <div className={`px-4 py-2.5 border-b ${DIVIDER} bg-[#F5F5F5]`}>
+                <div className={`flex items-center justify-between`}>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-semibold text-[#555]">文件名.xlsx — 共解析 35 条</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[11px] text-[#888]">✓ 30 正常</span>
+                      <span className="text-[11px] text-[#888]">△ 2 警告</span>
+                      <span className="text-[11px] text-[#C62828]">✕ 3 错误</span>
+                    </div>
                   </div>
+                  <span className="text-xs text-[#888] underline">重新上传</span>
                 </div>
-                <span className="text-xs text-[#888] underline">重新上传</span>
+                <div className="text-[11px] text-[#888] mt-1">32 条可导入 — 异常数据将在导入时跳过</div>
               </div>
 
               {/* 筛选栏 */}
@@ -658,6 +661,68 @@ export function WireframeBatchImportPage() {
                 <div className="w-48 h-7 border border-[#B0B0B0] rounded bg-[#EAEAEA] flex items-center px-2.5">
                   <span className="text-[11px] text-[#999]">搜索标的/代码/对手</span>
                 </div>
+              </div>
+
+              {/* 聚合看板 */}
+              <div className="px-4 py-3 border-b border-[#D0D0D0] bg-[#F0F0F0]">
+                <div className="bg-white rounded-lg border border-[#B0B0B0] shadow-sm overflow-hidden">
+                  {/* 看板头部 */}
+                  <div className="px-4 py-2.5 border-b border-[#D0D0D0] bg-[#F0F0F0]">
+                    <span className="text-xs font-semibold text-[#555]">录入概览</span>
+                    <span className="text-[10px] text-[#999] ml-1.5">— 快速校验录入数据</span>
+                  </div>
+
+                  {/* 汇总指标 */}
+                  <div className="px-4 py-3">
+                    <div className="grid grid-cols-4 gap-4">
+                      {['总名本', '总期权费', '总持仓数', '涉及机构'].map((label) => (
+                        <div key={label} className="flex flex-col gap-1">
+                          <span className="text-[10px] text-[#999]">{label}</span>
+                          <span className="text-base font-bold text-[#444]">—</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 按交易对手拆分 */}
+                  <div className="border-t border-[#D0D0D0]">
+                    <div className="px-4 py-2 bg-[#F0F0F0]">
+                      <span className="text-[10px] font-semibold text-[#888] uppercase tracking-wider">按交易对手</span>
+                    </div>
+                    <div className="px-4 pb-3">
+                      <table className="w-full table-fixed text-[11px]">
+                        <thead>
+                          <tr className="border-b border-[#D0D0D0]">
+                            {['交易对手', '笔数', '名本合计(万)', '期权费合计'].map(h => (
+                              <th key={h} className={`py-1.5 text-[10px] font-medium text-[#999] ${h === '交易对手' ? 'text-left' : 'text-right'}`}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {['银河证券', '中信证券', '华泰证券'].map((cp) => (
+                            <tr key={cp} className="border-b border-[#D0D0D0] last:border-b-0">
+                              <td className="py-1.5 font-medium text-[#1677FF] hover:underline cursor-pointer">{cp}</td>
+                              <td className="py-1.5 text-right text-[#888]">—</td>
+                              <td className="py-1.5 text-right text-[#555]">—</td>
+                              <td className="py-1.5 text-right text-[#555]">—</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-[8px] text-[#BBB] mt-1">↑ 按名本合计降序排列 · 点击交易对手可筛选列表</div>
+              </div>
+
+              {/* 筛选指示条 */}
+              <div className="flex items-center justify-between px-4 py-2 border-b border-[#D0D0D0] bg-[#E8F0FE]">
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="text-[#888]">已筛选：</span>
+                  <span className="font-semibold text-[#1677FF]">银河证券</span>
+                  <span className="text-[#888]">— N 条</span>
+                </div>
+                <span className="text-[11px] text-[#1677FF] font-medium">清空筛选</span>
               </div>
 
               {/* 表格 */}
@@ -682,7 +747,7 @@ export function WireframeBatchImportPage() {
                         <td className="px-2 py-1.5">
                           <span className={`text-[10px] px-2 py-0.5 rounded border ${row.status === '错误' ? 'border-[#FCA5A5] text-[#C62828]' : row.status === '警告' ? 'border-[#FDE68A] text-[#B45309]' : 'border-[#BBF7D0] text-[#15803D]'}`}>{row.status}</span>
                         </td>
-                        {Array.from({length: 14}, (_, j) => (
+                        {Array.from({length: 13}, (_, j) => (
                           <td key={j} className="px-2 py-1.5"><div className="h-4 rounded bg-[#D8D8D8]" style={{ width: '60px' }} /></td>
                         ))}
                         <td className="px-2 py-1.5"><span className={`text-[10px] ${row.status === '错误' ? 'text-[#C62828]' : row.status === '警告' ? 'text-[#B45309]' : 'text-[#CCC]'}`}>{row.note}</span></td>
@@ -692,8 +757,7 @@ export function WireframeBatchImportPage() {
                 </table>
               </div>
 
-              <div className={`flex items-center justify-between px-4 py-3 border-t ${DIVIDER}`}>
-                <span className="text-[11px] text-[#888]">共 35 条，32 条可导入 — 异常数据将在导入时跳过</span>
+              <div className={`flex items-center justify-end px-4 py-3 border-t ${DIVIDER}`}>
                 <div className="flex items-center gap-3">
                   <div className="px-5 py-2 border border-[#B0B0B0] rounded text-xs text-[#777]">取消</div>
                   <div className="px-5 py-2 bg-[#B0B0B0] rounded text-xs text-[#666]">确认导入 (32 条)</div>

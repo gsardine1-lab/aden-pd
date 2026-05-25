@@ -89,7 +89,7 @@ function StatusBadge({ position, wireframe, onClose }: { position: Position; wir
   if (wireframe) {
     const labels: Record<Position['status'], string> = {
       'profitable-exercisable': '申请行权（红）',
-      'loss-exercisable': '申请行权（灰）',
+      'loss-exercisable': '申请行权（红）',
       'not-expired': '未到可行权日（灰）',
       'expired': '已到期（灰）',
       'closed': '已平仓（灰）',
@@ -110,7 +110,7 @@ function StatusBadge({ position, wireframe, onClose }: { position: Position; wir
     if (!isAden) {
       return <span className={`${base} bg-[#F3F4F6] text-[#6B7280]`}>亏损</span>;
     }
-    return <button className={`${base} bg-[#E5E7EB] text-[#6B7280] hover:bg-[#D1D5DB] cursor-pointer`}>申请行权</button>;
+    return <button className={`${base} bg-[#E53935] text-white hover:bg-[#C62828] cursor-pointer`}>申请行权</button>;
   }
   if (status === 'not-expired') {
     if (isAden) {
@@ -229,11 +229,6 @@ function getRuleTags(p: Position): RuleTag[] {
       tags.push({ label: '分红调整', type: 'dividend-adjust' });
     }
   }
-  /*
-   * NOTE FOR PRD: 列表中的交易规则仅做 Demo 展示用，展示敲出规则和分红规则。
-   * 实际交易规则以线上已有规则为准，以开发实际实现情况为准。
-   * 当前标签类型仅保留 knockout 和 dividend 两类，exercise/expiry 规则不在列表中展示。
-   */
   return tags;
 }
 

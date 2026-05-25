@@ -35,13 +35,32 @@ const ALL_COUNTERPARTIES = (() => {
   return Object.entries(count).sort((a, b) => b[1] - a[1]).map(([name]) => name);
 })();
 
-function FieldSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { v: string; l: string }[] }) {
+function FieldSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: ({ v: string; l: string; group?: string })[] }) {
+  const groups = useMemo(() => {
+    const map = new Map<string, { v: string; l: string }[]>();
+    const flat: { v: string; l: string }[] = [];
+    options.forEach(o => {
+      if (o.group) {
+        if (!map.has(o.group)) map.set(o.group, []);
+        map.get(o.group)!.push(o);
+      } else {
+        flat.push(o);
+      }
+    });
+    return { grouped: Array.from(map.entries()), flat };
+  }, [options]);
+
   return (
     <div>
       <label className="text-[10px] text-[#6B7280] font-medium mb-1 block">{label}</label>
       <select value={value} onChange={e => onChange(e.target.value)}
         className="w-full text-[10px] border border-[#E5E7EB] rounded-md px-2 py-1 focus:outline-none focus:border-[#1677FF] bg-white">
-        {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+        {groups.flat.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+        {groups.grouped.map(([group, opts]) => (
+          <optgroup key={group} label={group}>
+            {opts.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+          </optgroup>
+        ))}
       </select>
     </div>
   );
@@ -138,7 +157,7 @@ export function FilterBar({ filters, onFilterChange, onClearFilter }: FilterBarP
                       <div className="border-t border-[#F3F4F6]" />
                       <div className="grid grid-cols-2 gap-2">
                         <FieldSelect label="收益率区间" value={f.returnRateRange} onChange={v => setFilter({ returnRateRange: v })} options={[{v:'',l:'全部'},{v:'<-10%',l:'< -10%'},{v:'-10%~0%',l:'-10% ~ 0%'},{v:'0%~10%',l:'0% ~ 10%'},{v:'>10%',l:'≥ 10%'}]} />
-                        <FieldSelect label="预估净收益" value={f.pnlRange} onChange={v => setFilter({ pnlRange: v })} options={[{v:'',l:'全部'},{v:'loss',l:'亏损'},{v:'flat',l:'持平'},{v:'profit',l:'盈利'}]} />
+                        <FieldSelect label="预估净收益" value={f.pnlRange} onChange={v => setFilter({ pnlRange: v })} options={[{v:'',l:'全部'},{v:'loss-30w+',l:'亏损30w以上',group:'亏损'},{v:'loss-10-30w',l:'亏损10-30w',group:'亏损'},{v:'loss-0-10w',l:'亏损0-10w',group:'亏损'},{v:'profit-0-10w',l:'盈利0-10w',group:'盈利'},{v:'profit-10-30w',l:'盈利10-30w',group:'盈利'},{v:'profit-30w+',l:'盈利30w以上',group:'盈利'}]} />
                       </div>
                     </div>
                     {(() => {
