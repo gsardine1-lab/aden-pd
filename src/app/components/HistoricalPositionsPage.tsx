@@ -135,6 +135,8 @@ export function HistoricalPositionsPage() {
           <div id="historical-summary" data-anchor className="bg-white rounded-xl border border-[#E8ECF0] shadow-sm">
             <div className="flex items-center justify-between px-5 py-3 border-b border-[#F3F4F6]">
               <div className="flex items-center gap-3">
+                <BarChart2 size={16} className="text-[#1677FF]" />
+                <span className="text-sm font-semibold text-[#0D1117]">已实现损益总额</span>
                 <div className="flex items-center bg-[#F3F4F6] rounded-lg p-0.5">
                 {(['CNY', 'USD', 'HKD'] as Currency[]).map((c) => (
                   <button
@@ -150,8 +152,6 @@ export function HistoricalPositionsPage() {
                   </button>
                 ))}
                 </div>
-                <BarChart2 size={16} className="text-[#1677FF]" />
-                <span className="text-sm font-semibold text-[#0D1117]">已实现损益总额</span>
               </div>
             </div>
             <div className="grid grid-cols-5 gap-4 px-5 py-4">

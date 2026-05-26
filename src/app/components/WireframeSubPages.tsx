@@ -834,12 +834,12 @@ export function WireframeHistoricalPage() {
           <div className={`bg-white border ${BORDER} rounded-lg shadow-sm`}>
             <div className={`flex items-center justify-between px-5 py-3 border-b ${DIVIDER}`}>
               <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-[#555]">已实现损益总额</span>
                 <div className="flex items-center bg-[#E8E8E8] rounded-md p-0.5">
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-white text-[#444] shadow-sm">CNY</span>
                   <span className="text-[10px] px-2 py-0.5 rounded text-[#999]">USD</span>
                   <span className="text-[10px] px-2 py-0.5 rounded text-[#999]">HKD</span>
                 </div>
-                <span className="text-sm font-semibold text-[#555]">已实现损益总额</span>
               </div>
             </div>
             <div className="grid grid-cols-5 gap-4 px-5 py-4">
