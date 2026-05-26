@@ -2,3 +2,6 @@ node_modules/
 dist/
 .DS_Store
 *.local
+持仓总览模块-PRD.md
+持仓总览-DEVNOTE.md
+src/imports/_____________-________PRD.md
