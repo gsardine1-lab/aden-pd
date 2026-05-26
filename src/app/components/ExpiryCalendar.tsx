@@ -103,13 +103,13 @@ export function ExpiryCalendar({ wireframe = false, positions }: ExpiryCalendarP
           </div>
         </div>
         <div className="flex gap-2 flex-1 min-h-0">
-          <div className="w-[70px] flex-shrink-0 flex flex-col gap-0.5 overflow-y-auto">
+          <div className="w-[92px] flex-shrink-0 flex flex-col gap-0.5 overflow-y-auto">
             {[0,1,2,3,4,5,6,7,8].map(i => {
               const d = new Date('2026-05-14');
               d.setDate(d.getDate() + i);
               const sel = i === 6;
               return (
-                <div key={i} className={`rounded-md border px-1.5 py-1 flex items-center gap-1.5 flex-shrink-0 ${sel ? 'border-[#999999] bg-[#E8E8E8]' : 'border-[#D8D8D8]'}`}>
+                <div key={i} className={`rounded-md border px-2 py-1 flex items-center gap-1.5 flex-shrink-0 ${sel ? 'border-[#999999] bg-[#E8E8E8]' : 'border-[#D8D8D8]'}`}>
                   <div>
                     <div className="text-[9px] font-semibold text-[#666666] leading-tight">{d.getMonth()+1}/{d.getDate()}</div>
                     <div className="text-[7px] text-[#AAAAAA] leading-tight">{['日','一','二','三','四','五','六'][d.getDay()]}</div>
@@ -176,7 +176,7 @@ export function ExpiryCalendar({ wireframe = false, positions }: ExpiryCalendarP
       {/* 主体 */}
       <div className="flex-1 flex gap-0 min-h-0">
         {/* 左侧滚动日期栏 */}
-        <div ref={scrollRef} className="w-[70px] flex-shrink-0 flex flex-col gap-0.5 px-1.5 pt-1 pb-1.5 border-r border-[#F3F4F6] overflow-y-auto max-h-[244px]">
+        <div ref={scrollRef} className="w-[92px] flex-shrink-0 flex flex-col gap-0.5 px-2 pt-1 pb-1.5 border-r border-[#F3F4F6] overflow-y-auto overflow-x-hidden max-h-[244px]">
           {allDays.map((day, idx) => {
             const count = day.positions.length;
             const isSel = idx === selectedIdx;
@@ -185,7 +185,7 @@ export function ExpiryCalendar({ wireframe = false, positions }: ExpiryCalendarP
               <button
                 key={day.dateStr}
                 onClick={() => setSelectedIdx(idx)}
-                className={`flex-shrink-0 w-full rounded-md border px-1.5 py-1 flex items-center gap-1.5 transition-colors ${
+                className={`w-full rounded-md border pl-2 pr-1.5 py-1 flex items-center justify-between transition-colors ${
                   isSel
                     ? 'border-[#F97316] bg-[#FFF7ED]'
                     : day.isToday
@@ -206,13 +206,13 @@ export function ExpiryCalendar({ wireframe = false, positions }: ExpiryCalendarP
                   </div>
                 </div>
                 {count > 0 ? (
-                  <span className={`ml-auto text-[8px] px-1 py-px rounded-full font-bold flex-shrink-0 ${
+                  <span className={`size-[16px] inline-flex items-center justify-center text-[8px] rounded-full font-bold flex-shrink-0 ${
                     isSel ? 'bg-[#F97316] text-white'
                     : count >= 3 ? 'bg-[#FEF2F2] text-[#DC2626]'
                     : 'bg-[#F3F4F6] text-[#6B7280]'
                   }`}>{count}</span>
                 ) : (
-                  <span className="ml-auto text-[8px] text-[#E5E7EB] flex-shrink-0">-</span>
+                  <span className="size-[16px] inline-flex items-center justify-center text-[8px] text-[#D1D5DB] flex-shrink-0">-</span>
                 )}
               </button>
             );

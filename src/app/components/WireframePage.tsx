@@ -108,13 +108,13 @@ export function WireframePage() {
                 <span className="text-[8px] text-[#999]">5/14 → 6/13</span>
               </div>
               <div className="flex gap-2">
-                <div className="w-[70px] flex-shrink-0 flex flex-col gap-0.5 max-h-[244px] overflow-y-auto px-1.5 py-1">
+                <div className="w-[84px] flex-shrink-0 flex flex-col gap-0.5 max-h-[244px] overflow-y-auto px-2 py-1">
                   {[0,1,2,3,4,5,6,7,8,9].map(i => {
                     const d = new Date('2026-05-14');
                     d.setDate(d.getDate() + i);
                     const sel = i === 6;
                     return (
-                      <div key={i} className={`rounded-md border px-1.5 py-1 flex items-center gap-1.5 flex-shrink-0 ${sel ? 'border-[#999] bg-[#E8E8E8]' : i <= 6 ? 'border-[#DDD] bg-[#F8F8F8]' : 'border-[#E0E0E0]'}`}>
+                      <div key={i} className={`rounded-md border px-2 py-1 flex items-center gap-1.5 flex-shrink-0 ${sel ? 'border-[#999] bg-[#E8E8E8]' : i <= 6 ? 'border-[#DDD] bg-[#F8F8F8]' : 'border-[#E0E0E0]'}`}>
                         <div>
                           <div className="text-[9px] font-semibold text-[#666] leading-tight">{d.getMonth()+1}/{d.getDate()}</div>
                           <div className="text-[7px] text-[#AAA] leading-tight">{['日','一','二','三','四','五','六'][d.getDay()]}</div>
