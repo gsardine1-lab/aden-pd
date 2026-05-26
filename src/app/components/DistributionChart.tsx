@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Sector } from 'recharts';
 import { mockPositions, formatAmount } from './mockData';
 import type { Position } from './mockData';
@@ -30,8 +30,6 @@ export function DistributionChart({ wireframe = false, onFilter, positions }: Di
   const dataSource = positions ?? mockPositions;
   const candidates = dataSource.filter(p => p.status !== 'closed' && p.status !== 'expired');
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
-  const chartWrapperRef = useRef<HTMLDivElement>(null);
 
   const bucketCounts = PCT_BUCKETS.map((bucket) => {
     const positions = dataSource.filter((p) => {
@@ -63,14 +61,7 @@ export function DistributionChart({ wireframe = false, onFilter, positions }: Di
   const lossBuckets = bucketCounts.filter((b) => b.max <= 0);
 
   const onPieEnter = useCallback((_: any, index: number) => setActiveIndex(index), []);
-  const onPieLeave = useCallback(() => { setActiveIndex(null); setTooltipPos(null); }, []);
-
-  const handleChartMouseMove = useCallback((e: React.MouseEvent) => {
-    if (chartWrapperRef.current) {
-      const rect = chartWrapperRef.current.getBoundingClientRect();
-      setTooltipPos({ x: e.clientX - rect.left + 10, y: e.clientY - rect.top - 10 });
-    }
-  }, []);
+  const onPieLeave = useCallback(() => { setActiveIndex(null); }, []);
 
   const renderActiveShape = (props: any) => {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
@@ -157,7 +148,7 @@ export function DistributionChart({ wireframe = false, onFilter, positions }: Di
       </div>
 
       {/* 饼图 — 居中 */}
-      <div className="flex justify-center px-3 pb-1" ref={chartWrapperRef} onMouseMove={handleChartMouseMove}>
+      <div className="flex justify-center px-3 pb-1">
         <PieChart width={90} height={90}>
           <Pie
             data={chartData}
@@ -176,8 +167,7 @@ export function DistributionChart({ wireframe = false, onFilter, positions }: Di
               <Cell key={`cell-${index}`} fill={entry.color} cursor="pointer" />
             ))}
           </Pie>
-          <Tooltip content={<CustomTooltip />} position={tooltipPos ?? undefined}
-            cursor={false} allowEscapeViewBox={{ x: true, y: true }} />
+          <Tooltip content={<CustomTooltip />} cursor={false} allowEscapeViewBox={{ x: true, y: true }} />
         </PieChart>
       </div>
 
