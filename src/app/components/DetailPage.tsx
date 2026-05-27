@@ -121,7 +121,7 @@ function generateEvents(position: Position): KeyEvent[] {
   });
 
   // 外部录入 / 无行情数据 → 仅保留建仓和行权，跳过行情相关事件
-  const hasMarketData = position.source !== 'external';
+  const hasMarketData = position.source !== 'external' && stockKnown;
 
   // 2. 除权除息 + 分红调整 — 仅亚丁展示
   if (hasMarketData && position.counterparty === '亚丁' && position.tradingRules.dividendRule) {
@@ -340,7 +340,7 @@ function KeyEventsTimeline({ position }: { position: Position }) {
       </div>
 
       {/* 股价走势图 */}
-      <div className="px-4 py-4">
+      <div className={`px-4 py-4 ${showMarketData ? '' : 'hidden'}`}>
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={priceData} margin={{ top: 15, right: 30, left: 70, bottom: 5 }}>
@@ -519,6 +519,14 @@ export function DetailPage() {
   const [edits, setEdits] = useState<Record<string, string | number>>({});
   const [isEditMode, setIsEditMode] = useState(false);
   const isNonAden = position.counterparty !== '亚丁';
+
+  // 股票是否为已知标的（有行情数据）
+  const stockKnown = useMemo(() => {
+    const u = String(edits['underlying'] ?? position.underlying);
+    const c = String(edits['code'] ?? position.code);
+    return mockPositions.some(p => p.underlying === u || p.code === c);
+  }, [edits, position]);
+  const showMarketData = position.source !== 'external' && stockKnown;
 
   // 自定义标签
   const [positionTags, setPositionTags] = useState<string[]>(() => {
@@ -1010,6 +1018,7 @@ export function DetailPage() {
                   {!isEditMode && <span className="text-[10px] text-[#9ca3af]">数据更新 2026-05-14 15:00</span>}
                 </div>
                 <div className="flex items-center gap-6 mt-2">
+                  {showMarketData && (
                   <div className="flex items-center gap-2">
                     <span className="text-[28px] font-bold" style={{ color: isRise ? '#dc2626' : '#16a34a' }}>{position.currentPrice.toFixed(2)}</span>
                     <div className="flex flex-col">
@@ -1019,6 +1028,7 @@ export function DetailPage() {
                       </div>
                     </div>
                   </div>
+                  )}
                   <div className="flex items-center gap-4 text-xs text-[#9ca3af]">
                     <span>交易对手 {isEditMode && isNonAden ? (
                       <input value={String(edits['counterparty_2'] ?? position.counterparty)} onChange={e => setEdits(prev => ({ ...prev, counterparty: e.target.value, counterparty_2: e.target.value }))} className="font-semibold text-[#0d1117] border border-[#1677FF] rounded px-1 py-0 focus:outline-none w-[120px]" />
@@ -1094,7 +1104,7 @@ export function DetailPage() {
           </div>
 
           {/* === 模块二 + 模块三：持仓明细 + 情景模拟（并排） === */}
-          <div className="grid grid-cols-[3fr_1fr] gap-4">
+          <div className={`grid gap-4 ${showMarketData ? 'grid-cols-[3fr_1fr]' : 'grid-cols-1'}`}>
           <div id="position-detail-card" data-anchor className="bg-white rounded-xl border border-[#e8ecf0] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8ecf0]">
               <div className="flex items-center gap-2">
@@ -1190,23 +1200,31 @@ export function DetailPage() {
                       <span className="text-[#9ca3af]">执行价</span>
                       <EditableValue field="strikePrice" value={position.strikePrice.toFixed(2)} className="font-medium text-[#1d4ed8] whitespace-nowrap" suffix={` ${cur}`} />
                     </div>
+                    {showMarketData && (
                     <div className="flex justify-between text-xs">
                       <span className="text-[#9ca3af]">当前市价</span>
                       <EditableValue field="currentPrice" value={position.currentPrice.toFixed(2)} className="font-semibold whitespace-nowrap" suffix={` ${cur}`} style={{ color: isRise ? '#dc2626' : '#16a34a' }} />
                     </div>
+                    )}
+                    {showMarketData && (
                     <div className="flex justify-between text-xs">
                       <span className="text-[#9ca3af]">当前涨幅</span>
                       <span className="font-semibold" style={{ color: isRise ? '#dc2626' : '#16a34a' }}>{formatRate(position.priceDiff)}</span>
                     </div>
+                    )}
+                    {showMarketData && (
                     <div className="flex justify-between text-xs">
                       <span className="text-[#9ca3af]">盈亏平衡点</span>
                       <EditableValue field="breakEvenPrice" value={position.breakEvenPrice.toFixed(2)} className="font-medium text-[#0d1117] whitespace-nowrap" suffix={` ${cur}`} />
                     </div>
+                    )}
                     <div className="flex justify-between text-xs">
                       <span className="text-[#9ca3af]">距平衡点</span>
+                      {showMarketData ? (
                       <span className="font-medium" style={{ color: position.breakevenDiff >= 0 ? '#dc2626' : '#16a34a' }}>
                         {formatRate(position.breakevenDiff)}
                       </span>
+                      ) : <span className="font-medium text-[#9CA3AF]">-</span>}
                     </div>
                   </div>
                 </div>
@@ -1276,9 +1294,11 @@ export function DetailPage() {
           </div>
 
           {/* === 模块三：持仓盈亏情景模拟 === */}
+          {showMarketData && (
           <div id="scenario-simulator" data-anchor className="flex flex-col">
           <ScenarioSimulator positionId={position.id} />
           </div>
+          )}
           </div>
 
           <div className="text-[10px] text-[#9ca3af] text-center pb-2">
