@@ -758,37 +758,20 @@ export function DetailPage() {
   }
 
   function EditableValue({ field, value, className = '', suffix = '', style, type = 'text' }: { field: string; value: string | number; className?: string; suffix?: string; style?: React.CSSProperties; type?: string }) {
-    const [editing, setEditing] = useState(false);
-    const [val, setVal] = useState(String(edits[field] ?? value));
-    if (!isNonAden) return <span className={className} style={style}>{value}{suffix}</span>;
-    if (editing) {
-      return (
-        <span className="flex items-center gap-1">
-          <input
-            type={type}
-            value={val}
-            onChange={e => setVal(e.target.value)}
-            onBlur={() => {
-              setEdits(prev => ({ ...prev, [field]: isNaN(Number(val)) ? val : Number(val) }));
-              setEditing(false);
-            }}
-            onKeyDown={e => { if (e.key === 'Enter') { setEdits(prev => ({ ...prev, [field]: isNaN(Number(val)) ? val : Number(val) })); setEditing(false); } }}
-            onClick={type === 'date' ? (e => { e.preventDefault(); (e.target as HTMLInputElement).showPicker?.(); }) : undefined}
-            className={`text-xs border border-[#1677FF] rounded px-1 py-0 focus:outline-none ${type === 'date' ? 'cursor-pointer' : ''}`}
-            style={{ width: 80, ...style }}
-            autoFocus
-          />
-          {suffix && <span className="text-xs text-[#6B7280] whitespace-nowrap">{suffix}</span>}
-        </span>
-      );
-    }
+    const currentVal = edits[field] !== undefined ? String(edits[field]) : String(value);
+    if (!isNonAden || !isEditMode) return <span className={className} style={style}>{currentVal}{suffix}</span>;
     return (
-      <span
-        className={`${className} cursor-pointer hover:bg-[#EFF6FF] hover:text-[#1677FF] rounded px-1 -mx-1 transition-colors border-b border-dashed border-transparent hover:border-[#1677FF]`}
-        style={style}
-        onClick={() => { setVal(String(edits[field] ?? value)); setEditing(true); }}
-      >
-        {edits[field] !== undefined ? String(edits[field]) : value}{suffix}
+      <span className="flex items-center gap-1">
+        <input
+          type={type}
+          value={currentVal}
+          onChange={e => setEdits(prev => ({ ...prev, [field]: type === 'text' ? e.target.value : Number(e.target.value) || prev[field] }))}
+          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+          onClick={type === 'date' ? (e => { e.preventDefault(); (e.target as HTMLInputElement).showPicker?.(); }) : undefined}
+          className={`text-xs border border-[#1677FF] rounded px-1 py-0 focus:outline-none ${type === 'date' ? 'cursor-pointer' : ''}`}
+          style={{ width: type === 'text' ? 120 : 80, ...style }}
+        />
+        {suffix && <span className="text-xs text-[#6B7280] whitespace-nowrap">{suffix}</span>}
       </span>
     );
   }
