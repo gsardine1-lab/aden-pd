@@ -860,6 +860,9 @@ export function DetailPage() {
                       {isEditMode ? '完成' : '编辑'}
                     </button>
                   )}
+                  {isNonAden && !isEditMode && (
+                    <button onClick={() => setDeleteConfirm(true)} className="text-[10px] text-[#D1D5DB] hover:text-[#E53935] transition-colors ml-1">删除</button>
+                  )}
                 </div>
                 <div className="flex items-center gap-4 mt-2 text-xs text-[#9ca3af]">
                   <span>交易对手 {isEditMode && isNonAden ? (
@@ -924,7 +927,7 @@ export function DetailPage() {
                         <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-[#6B7280]">#</th>
                         <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-[#6B7280]">平仓日期</th>
                         <th className="text-right px-4 py-2.5 text-[10px] font-semibold text-[#6B7280]">平仓价格</th>
-                        <th className="text-right px-4 py-2.5 text-[10px] font-semibold text-[#6B7280]">本次名本（万）</th>
+                        <th className="text-right px-4 py-2.5 text-[10px] font-semibold text-[#6B7280]">本次平仓名本（万）</th>
                         <th className="text-right px-4 py-2.5 text-[10px] font-semibold text-[#6B7280]">累计名本（万）</th>
                       </tr>
                     </thead>
@@ -1053,6 +1056,9 @@ export function DetailPage() {
                       {isEditMode ? '完成' : '编辑'}
                     </button>
                   )}
+                  {isNonAden && !isEditMode && (
+                    <button onClick={() => setDeleteConfirm(true)} className="text-[10px] text-[#D1D5DB] hover:text-[#E53935] transition-colors ml-1">删除</button>
+                  )}
                 </div>
                 <div className="flex items-center gap-6 mt-2">
                   {showMarketData && (
@@ -1095,7 +1101,6 @@ export function DetailPage() {
                       手动平仓
                     </button>
                   )}
-                  <button onClick={() => setDeleteConfirm(true)} className="text-[10px] text-[#D1D5DB] hover:text-[#E53935] transition-colors ml-2">删除</button>
                 </>
               )}
             </div>
