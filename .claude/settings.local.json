@@ -82,7 +82,8 @@
       "Bash(curl -s -o /dev/null -w \"CSS: %{http_code}\\\\n\" \"https://gsardine1-lab.github.io/aden-pd/assets/index-Cwh5FNm7.css\")",
       "Bash(git rm *)",
       "Bash(grep -n \"^\\\\s*</div>\\\\s*$\" \"/Users/gsardine/Documents/Aden相关/网页版原型/持仓总览页/1.0/src/app/components/DetailPage.tsx\")",
-      "Bash(awk 'NR>=343 && NR<=442 { print NR\": \"$0 }' \"/Users/gsardine/Documents/Aden相关/网页版原型/持仓总览页/1.0/src/app/components/DetailPage.tsx\")"
+      "Bash(awk 'NR>=343 && NR<=442 { print NR\": \"$0 }' \"/Users/gsardine/Documents/Aden相关/网页版原型/持仓总览页/1.0/src/app/components/DetailPage.tsx\")",
+      "WebFetch(domain:localhost)"
     ]
   }
 }

@@ -105,7 +105,7 @@ function renderEventDetail(evt: KeyEvent): React.ReactNode[] {
   return lines;
 }
 
-function generateEvents(position: Position): KeyEvent[] {
+function generateEvents(position: Position, stockKnown: boolean): KeyEvent[] {
   const s = new Date(position.startDate);
   const e = new Date(position.expiryDate);
   const events: KeyEvent[] = [];
@@ -253,7 +253,7 @@ function KeyEventsTimeline({ position }: { position: Position }) {
   const [activeFilters, setActiveFilters] = useState<Set<EventType>>(new Set(ALL_TYPES));
   const [selectedEvent, setSelectedEvent] = useState<KeyEvent | null>(null);
 
-  const events = useMemo(() => generateEvents(position), [position]);
+  const events = useMemo(() => generateEvents(position, stockKnown), [position, stockKnown]);
   const priceData = useMemo(() => generatePriceData(position, events), [position, events]);
 
   const toggleFilter = (type: EventType) => {
