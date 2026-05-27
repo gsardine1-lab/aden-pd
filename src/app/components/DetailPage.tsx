@@ -105,7 +105,7 @@ function renderEventDetail(evt: KeyEvent): React.ReactNode[] {
   return lines;
 }
 
-function generateEvents(position: Position, stockKnown: boolean): KeyEvent[] {
+function generateEvents(position: Position): KeyEvent[] {
   const s = new Date(position.startDate);
   const e = new Date(position.expiryDate);
   const events: KeyEvent[] = [];
@@ -121,7 +121,7 @@ function generateEvents(position: Position, stockKnown: boolean): KeyEvent[] {
   });
 
   // 外部录入 / 无行情数据 → 仅保留建仓和行权，跳过行情相关事件
-  const hasMarketData = position.source !== 'external' && stockKnown;
+  const hasMarketData = position.source !== 'external';
 
   // 2. 除权除息 + 分红调整 — 仅亚丁展示
   if (hasMarketData && position.counterparty === '亚丁' && position.tradingRules.dividendRule) {
@@ -253,7 +253,7 @@ function KeyEventsTimeline({ position }: { position: Position }) {
   const [activeFilters, setActiveFilters] = useState<Set<EventType>>(new Set(ALL_TYPES));
   const [selectedEvent, setSelectedEvent] = useState<KeyEvent | null>(null);
 
-  const events = useMemo(() => generateEvents(position, stockKnown), [position, stockKnown]);
+  const events = useMemo(() => generateEvents(position), [position]);
   const priceData = useMemo(() => generatePriceData(position, events), [position, events]);
 
   const toggleFilter = (type: EventType) => {
