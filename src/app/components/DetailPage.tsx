@@ -518,6 +518,7 @@ export function DetailPage() {
   const isProfit = position.pnlCNY >= 0;
   const todayDate = '2026-05-20';
   const [closeTarget, setCloseTarget] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [closeFormPrice, setCloseFormPrice] = useState('');
   const [closeFormNotional, setCloseFormNotional] = useState('');
   const [closeFormDate, setCloseFormDate] = useState(todayDate);
@@ -1094,6 +1095,7 @@ export function DetailPage() {
                       手动平仓
                     </button>
                   )}
+                  <button onClick={() => setDeleteConfirm(true)} className="text-[10px] text-[#D1D5DB] hover:text-[#E53935] transition-colors ml-2">删除</button>
                 </>
               )}
             </div>
@@ -1413,6 +1415,35 @@ export function DetailPage() {
             </div>
             );
           })()}
+
+          {/* 删除确认弹窗 */}
+          {deleteConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDeleteConfirm(false)}>
+              <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+                <div className="text-sm font-semibold text-[#0D1117] mb-2">确认删除</div>
+                <div className="text-xs text-[#6B7280] mb-4">
+                  确定要删除「{position.underlying}」的持仓记录吗？此操作无法撤销。
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <button onClick={() => setDeleteConfirm(false)} className="px-4 py-2 text-xs font-medium text-[#6B7280] bg-[#F3F4F6] rounded-lg hover:bg-[#E5E7EB] transition-colors">
+                    取消
+                  </button>
+                  <button onClick={() => {
+                    try {
+                      const saved = localStorage.getItem('deletedPositions');
+                      const list = saved ? JSON.parse(saved) : [];
+                      list.push(position.id);
+                      localStorage.setItem('deletedPositions', JSON.stringify(list));
+                    } catch {}
+                    navigate('/');
+                  }} className="px-4 py-2 text-xs font-medium text-white bg-[#E53935] rounded-lg hover:bg-[#C62828] transition-colors">
+                    确认删除
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>

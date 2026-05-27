@@ -179,7 +179,8 @@ export function HighFidelityPage() {
       } catch {}
       return pos;
     });
-    return withOverrides.filter(p => p.status !== 'closed' && !(p.status === 'expired' && p.counterparty === '亚丁'));
+    const deleted = (() => { try { const s = localStorage.getItem('deletedPositions'); return s ? JSON.parse(s) : []; } catch { return []; } })();
+    return withOverrides.filter(p => p.status !== 'closed' && !(p.status === 'expired' && p.counterparty === '亚丁') && !deleted.includes(p.id));
   }, [filters, filterActive, overriddenStatuses]);
 
   const handleClearFilter = () => {

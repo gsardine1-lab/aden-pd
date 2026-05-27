@@ -37,7 +37,11 @@ export function HistoricalPositionsPage() {
         }
         return pos;
       })
-      .filter(p => p.status === 'closed');
+      .filter(p => p.status === 'closed')
+      .filter(p => {
+        const deleted = (() => { try { const s = localStorage.getItem('deletedPositions'); return s ? JSON.parse(s) : []; } catch { return []; } })();
+        return !deleted.includes(p.id);
+      });
   }, [overriddenStatuses]);
 
   const filtered = useMemo(() => {
