@@ -18,6 +18,13 @@ export function HistoricalPositionsPage() {
     } catch { return {}; }
   }, []);
 
+  const positionTags = useMemo<Record<string, string[]>>(() => {
+    try {
+      const saved = localStorage.getItem('positionTags');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  }, []);
+
   const historical = useMemo(() => {
     return mockPositions
       .map(p => {
@@ -254,13 +261,15 @@ export function HistoricalPositionsPage() {
                     <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap cursor-pointer hover:bg-[#F3F4F6] select-none" onClick={() => handleSort('notionalCNY')}>名本{renderSortArrow('notionalCNY')}</th>
                     <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap cursor-pointer hover:bg-[#F3F4F6] select-none" onClick={() => handleSort('closingPnlCNY')}>平仓收益{renderSortArrow('closingPnlCNY')}</th>
                     <th className="text-right px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap cursor-pointer hover:bg-[#F3F4F6] select-none" onClick={() => handleSort('cumulativePnlCNY')}>累计净收益{renderSortArrow('cumulativePnlCNY')}</th>
+                    <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap">备注</th>
+                    <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap">标签</th>
                     <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-[#374151] whitespace-nowrap">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-3 py-10 text-center text-sm text-[#9CA3AF]">
+                      <td colSpan={11} className="px-3 py-10 text-center text-sm text-[#9CA3AF]">
                         暂无私幕纪录
                       </td>
                     </tr>
@@ -312,6 +321,23 @@ export function HistoricalPositionsPage() {
                             p.cumulativePnlCNY >= 0 ? 'text-[#E53935]' : 'text-[#059669]'
                           }`}>
                             {p.cumulativePnlCNY >= 0 ? '+' : ''}{formatAmount(convertCurrency(p.cumulativePnlCNY, cur), cur, false)}
+                          </td>
+                          <td className="px-3 py-3 max-w-[120px]">
+                            <span className="text-[10px] text-[#6B7280] line-clamp-2" title={p.ruleNotes || p.notes || undefined}>
+                              {p.ruleNotes || p.notes || <span className="text-[#D1D5DB]">-</span>}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {(() => {
+                                const customTags = positionTags[p.id] || [];
+                                const allTags = [...p.tags, ...customTags];
+                                if (allTags.length === 0) return <span className="text-[10px] text-[#D1D5DB]">-</span>;
+                                return allTags.slice(0, 3).map(tag => (
+                                  <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded border border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] whitespace-nowrap">{tag}</span>
+                                )).concat(allTags.length > 3 ? [<span key="more" className="text-[9px] text-[#9CA3AF]">+{allTags.length - 3}</span>] : []);
+                              })()}
+                            </div>
                           </td>
                           <td className="px-3 py-3 text-center">
                             <Link

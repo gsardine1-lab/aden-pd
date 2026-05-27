@@ -875,7 +875,7 @@ export function WireframeHistoricalPage() {
               <table className="w-full min-w-[1000px] text-xs">
                 <thead>
                   <tr className={`bg-[#ECECEC] border-b ${DIVIDER}`}>
-                    {['标的信息', '交易对手', '结构', '状态', '开仓日 / 到期日', '名本', '平仓收益', '累计净收益', '操作'].map(h => (
+                    {['标的信息', '交易对手', '结构', '状态', '开仓日 / 到期日', '名本', '平仓收益', '累计净收益', '备注', '标签', '操作'].map(h => (
                       <th key={h} className="text-left px-3 py-2.5 text-[10px] font-semibold text-[#666] whitespace-nowrap">{h} {h !== '操作' && '▲'}</th>
                     ))}
                   </tr>
@@ -897,6 +897,8 @@ export function WireframeHistoricalPage() {
                       <td className="px-3 py-2.5"><div className="h-3.5 rounded bg-[#D8D8D8] w-16" /></td>
                       <td className="px-3 py-2.5"><div className="h-3.5 rounded bg-[#D8D8D8] w-16" /></td>
                       <td className="px-3 py-2.5"><div className="h-3.5 rounded bg-[#D8D8D8] w-16" /></td>
+                      <td className="px-3 py-2.5"><div className="h-3.5 rounded bg-[#D8D8D8] w-14" /></td>
+                      <td className="px-3 py-2.5"><div className="h-3.5 rounded bg-[#D8D8D8] w-12" /></td>
                       <td className="px-3 py-2.5"><span className="text-[#888] text-[10px]">详情</span></td>
                     </tr>
                   ))}
@@ -928,7 +930,7 @@ export function WireframeHistoricalPage() {
               <div className="border border-[#B0B0B0] rounded p-3 bg-white">
                 <div className="text-[9px] font-semibold text-[#555] mb-2">排序交互</div>
                 <div className="space-y-1.5 text-[9px] text-[#888]">
-                  <div>可排序列：标的信息/交易对手/结构/状态/开仓日到期日/名本/平仓收益/累计净收益</div>
+                  <div>可排序列：标的信息/交易对手/结构/状态/开仓日到期日/名本/平仓收益/累计净收益 · 备注和标签为补充信息列</div>
                   <div>点击列头 → 升序/降序切换 · 当前排序列显示▲/▼</div>
                 </div>
               </div>
