@@ -248,7 +248,7 @@ function generatePriceData(position: Position, events: KeyEvent[]) {
   return data;
 }
 
-function KeyEventsTimeline({ position }: { position: Position }) {
+function KeyEventsTimeline({ position, showMarketData }: { position: Position; showMarketData: boolean }) {
   const ALL_TYPES: EventType[] = ['建仓', '除权除息', '分红调整', 'ST记录', '停复牌', '行权'];
   const [activeFilters, setActiveFilters] = useState<Set<EventType>>(new Set(ALL_TYPES));
   const [selectedEvent, setSelectedEvent] = useState<KeyEvent | null>(null);
@@ -309,6 +309,20 @@ function KeyEventsTimeline({ position }: { position: Position }) {
     }
     return null;
   };
+
+  if (!showMarketData) {
+    return (
+      <div className="bg-white rounded-xl border border-[#e8ecf0] overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8ecf0]">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-5 rounded-full bg-gradient-to-b from-[#1d4ed8] to-[#60a5fa]" />
+            <h2 className="text-sm font-semibold text-[#0d1117]">关键事件记录</h2>
+          </div>
+        </div>
+        <div className="px-6 py-8 text-center text-xs text-[#9CA3AF]">暂无行情数据，关键事件不可用</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl border border-[#e8ecf0] overflow-hidden">
@@ -819,15 +833,39 @@ export function DetailPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl font-semibold text-[#0d1117]">{position.underlying}</h1>
-                  <span className="text-xs text-[#9ca3af]">{position.code}</span>
+                  {isEditMode && isNonAden ? (
+                    <input value={String(edits['underlying'] ?? position.underlying)} onChange={e => setEdits(prev => ({ ...prev, underlying: e.target.value }))} className="text-xl font-semibold text-[#0d1117] border border-[#1677FF] rounded px-2 py-0 focus:outline-none w-[200px]" />
+                  ) : (
+                    <h1 className="text-xl font-semibold text-[#0d1117]">{String(edits['underlying'] ?? position.underlying)}</h1>
+                  )}
+                  {isEditMode && isNonAden ? (
+                    <input value={String(edits['code'] ?? position.code)} onChange={e => setEdits(prev => ({ ...prev, code: e.target.value }))} className="text-xs border border-[#1677FF] rounded px-1 py-0 focus:outline-none w-[120px]" />
+                  ) : (
+                    <span className="text-xs text-[#9ca3af]">{String(edits['code'] ?? position.code)}</span>
+                  )}
                   <span className="px-2 py-0.5 rounded text-[10px] font-medium border"
                     style={{ background: closeStatusColor.bg, color: closeStatusColor.text, borderColor: closeStatusColor.border }}>
                     {closeStatusLabel}
                   </span>
+                  {isNonAden && (
+                    <button
+                      onClick={() => setIsEditMode(!isEditMode)}
+                      className={`text-[10px] px-2.5 py-0.5 rounded-md font-medium transition-colors ${
+                        isEditMode
+                          ? 'bg-[#059669] text-white hover:bg-[#047857]'
+                          : 'border border-[#D1D5DB] text-[#6B7280] hover:border-[#1677FF] hover:text-[#1677FF] bg-white'
+                      }`}
+                    >
+                      {isEditMode ? '完成' : '编辑'}
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-4 mt-2 text-xs text-[#9ca3af]">
-                  <span>交易对手 <strong className="text-[#0d1117]">{position.counterparty}</strong></span>
+                  <span>交易对手 {isEditMode && isNonAden ? (
+                    <input value={String(edits['counterparty'] ?? position.counterparty)} onChange={e => setEdits(prev => ({ ...prev, counterparty: e.target.value }))} className="font-semibold text-[#0d1117] border border-[#1677FF] rounded px-1 py-0 focus:outline-none w-[120px]" />
+                  ) : (
+                    <strong className="text-[#0d1117]">{String(edits['counterparty'] ?? position.counterparty)}</strong>
+                  )}</span>
                   <span className="text-[#e8ecf0]">|</span>
                   <span>持有期 <strong className="text-[#0d1117]">{position.startDate} 至 {position.expiryDate}</strong>（{holdingDays} 天）</span>
                   <span className="text-[#e8ecf0]">|</span>
@@ -949,7 +987,7 @@ export function DetailPage() {
             </div>
 
             {/* ===== 关键事件记录 ===== */}
-            <KeyEventsTimeline position={position} />
+            <KeyEventsTimeline position={position} showMarketData={showMarketData} />
 
             {position.notes && (
               <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-lg px-4 py-3 text-xs text-[#92400E]">
@@ -990,12 +1028,33 @@ export function DetailPage() {
             <div className="flex items-start gap-4">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl font-semibold text-[#0d1117]">{position.underlying}</h1>
-                  <span className="text-xs text-[#9ca3af]">{position.code}</span>
-                  <span className="text-[#1677FF] hover:text-[#0E5FCC] cursor-pointer text-xs ml-1">刷新</span>
-                  <span className="text-[10px] text-[#9ca3af]">数据更新 2026-05-14 15:00</span>
+                  {isEditMode && isNonAden ? (
+                    <input value={String(edits['underlying'] ?? position.underlying)} onChange={e => setEdits(prev => ({ ...prev, underlying: e.target.value }))} className="text-xl font-semibold text-[#0d1117] border border-[#1677FF] rounded px-2 py-0 focus:outline-none w-[200px]" />
+                  ) : (
+                    <h1 className="text-xl font-semibold text-[#0d1117]">{String(edits['underlying'] ?? position.underlying)}</h1>
+                  )}
+                  {isEditMode && isNonAden ? (
+                    <input value={String(edits['code'] ?? position.code)} onChange={e => setEdits(prev => ({ ...prev, code: e.target.value }))} className="text-xs border border-[#1677FF] rounded px-1 py-0 focus:outline-none w-[120px]" />
+                  ) : (
+                    <span className="text-xs text-[#9ca3af]">{String(edits['code'] ?? position.code)}</span>
+                  )}
+                  {!isEditMode && <span className="text-[#1677FF] hover:text-[#0E5FCC] cursor-pointer text-xs ml-1">刷新</span>}
+                  {!isEditMode && <span className="text-[10px] text-[#9ca3af]">数据更新 2026-05-14 15:00</span>}
+                  {isNonAden && (
+                    <button
+                      onClick={() => setIsEditMode(!isEditMode)}
+                      className={`text-[10px] px-2.5 py-0.5 rounded-md font-medium transition-colors ml-1 ${
+                        isEditMode
+                          ? 'bg-[#059669] text-white hover:bg-[#047857]'
+                          : 'border border-[#D1D5DB] text-[#6B7280] hover:border-[#1677FF] hover:text-[#1677FF] bg-white'
+                      }`}
+                    >
+                      {isEditMode ? '完成' : '编辑'}
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-6 mt-2">
+                  {showMarketData && (
                   <div className="flex items-center gap-2">
                     <span className="text-[28px] font-bold" style={{ color: isRise ? '#dc2626' : '#16a34a' }}>{position.currentPrice.toFixed(2)}</span>
                     <div className="flex flex-col">
@@ -1005,8 +1064,13 @@ export function DetailPage() {
                       </div>
                     </div>
                   </div>
+                  )}
                   <div className="flex items-center gap-4 text-xs text-[#9ca3af]">
-                    <span>交易对手 <strong className="text-[#0d1117]">{position.counterparty}</strong></span>
+                    <span>交易对手 {isEditMode && isNonAden ? (
+                      <input value={String(edits['counterparty'] ?? position.counterparty)} onChange={e => setEdits(prev => ({ ...prev, counterparty: e.target.value }))} className="font-semibold text-[#0d1117] border border-[#1677FF] rounded px-1 py-0 focus:outline-none w-[120px]" />
+                    ) : (
+                      <strong className="text-[#0d1117]">{String(edits['counterparty'] ?? position.counterparty)}</strong>
+                    )}</span>
                   </div>
                 </div>
               </div>
@@ -1072,11 +1136,11 @@ export function DetailPage() {
 
           {/* === 模块一：关键事件记录 === */}
           <div id="key-events-timeline" data-anchor>
-          <KeyEventsTimeline position={position} />
+          <KeyEventsTimeline position={position} showMarketData={showMarketData} />
           </div>
 
           {/* === 模块二 + 模块三：持仓明细 + 情景模拟（并排） === */}
-          <div className="grid grid-cols-[3fr_1fr] gap-4">
+          <div className={`grid gap-4 ${showMarketData ? 'grid-cols-[3fr_1fr]' : 'grid-cols-1'}`}>
           <div id="position-detail-card" data-anchor className="bg-white rounded-xl border border-[#e8ecf0] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8ecf0]">
               <div className="flex items-center gap-2">
@@ -1084,6 +1148,16 @@ export function DetailPage() {
                 <h2 className="text-sm font-semibold text-[#0d1117]">持仓明细</h2>
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#eff6ff] text-[#1d4ed8]">1 笔</span>
               </div>
+              {isNonAden && (
+                <span
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className={`text-[10px] cursor-pointer hover:underline transition-colors ${
+                    isEditMode ? 'text-[#059669]' : 'text-[#9CA3AF] hover:text-[#1677FF]'
+                  }`}
+                >
+                  {isEditMode ? '完成编辑' : '编辑'}
+                </span>
+              )}
             </div>
 
             {/* 卡片式持仓详情 */}
@@ -1160,23 +1234,31 @@ export function DetailPage() {
                       <span className="text-[#9ca3af]">执行价</span>
                       <EditableValue field="strikePrice" value={position.strikePrice.toFixed(2)} className="font-medium text-[#1d4ed8] whitespace-nowrap" suffix={` ${cur}`} />
                     </div>
+                    {showMarketData && (
                     <div className="flex justify-between text-xs">
                       <span className="text-[#9ca3af]">当前市价</span>
                       <EditableValue field="currentPrice" value={position.currentPrice.toFixed(2)} className="font-semibold whitespace-nowrap" suffix={` ${cur}`} style={{ color: isRise ? '#dc2626' : '#16a34a' }} />
                     </div>
+                    )}
+                    {showMarketData && (
                     <div className="flex justify-between text-xs">
                       <span className="text-[#9ca3af]">当前涨幅</span>
                       <span className="font-semibold" style={{ color: isRise ? '#dc2626' : '#16a34a' }}>{formatRate(position.priceDiff)}</span>
                     </div>
+                    )}
+                    {showMarketData && (
                     <div className="flex justify-between text-xs">
                       <span className="text-[#9ca3af]">盈亏平衡点</span>
                       <EditableValue field="breakEvenPrice" value={position.breakEvenPrice.toFixed(2)} className="font-medium text-[#0d1117] whitespace-nowrap" suffix={` ${cur}`} />
                     </div>
+                    )}
                     <div className="flex justify-between text-xs">
                       <span className="text-[#9ca3af]">距平衡点</span>
+                      {showMarketData ? (
                       <span className="font-medium" style={{ color: position.breakevenDiff >= 0 ? '#dc2626' : '#16a34a' }}>
                         {formatRate(position.breakevenDiff)}
                       </span>
+                      ) : <span className="font-medium text-[#9CA3AF]">-</span>}
                     </div>
                   </div>
                 </div>
@@ -1246,9 +1328,11 @@ export function DetailPage() {
           </div>
 
           {/* === 模块三：持仓盈亏情景模拟 === */}
+          {showMarketData && (
           <div id="scenario-simulator" data-anchor className="flex flex-col">
           <ScenarioSimulator positionId={position.id} />
           </div>
+          )}
           </div>
 
           <div className="text-[10px] text-[#9ca3af] text-center pb-2">
