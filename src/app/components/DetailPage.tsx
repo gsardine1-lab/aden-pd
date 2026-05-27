@@ -340,7 +340,7 @@ function KeyEventsTimeline({ position }: { position: Position }) {
       </div>
 
       {/* 股价走势图 */}
-      <div className={`px-4 py-4 ${showMarketData ? '' : 'hidden'}`}>
+      <div className="px-4 py-4">
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={priceData} margin={{ top: 15, right: 30, left: 70, bottom: 5 }}>
