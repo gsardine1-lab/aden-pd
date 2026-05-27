@@ -125,10 +125,13 @@ export function WireframeDetailPage() {
               <div className="flex gap-4 px-5 py-4 border-b border-[#D0D0D0]">
                 {/* 左：持仓明细 */}
                 <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-1 h-4 rounded bg-[#C0C0C0]" />
-                  <span className="text-xs font-semibold text-[#555]">持仓明细</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F0F0F0] text-[#888]">1 笔</span>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-4 rounded bg-[#C0C0C0]" />
+                    <span className="text-xs font-semibold text-[#555]">持仓明细</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#F0F0F0] text-[#888]">1 笔</span>
+                  </div>
+                  <span className="text-[9px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#888]">编辑</span>
                 </div>
                 <div className="grid grid-cols-3 gap-6">
                   <div>
@@ -446,7 +449,7 @@ export function WireframeExternalEntryPage() {
                         <span className="text-xs text-[#999] font-mono">代码</span>
                         <span className="text-[8px] text-[#999]">（标的未识别时：名称需最高视觉强调 + ⚠ 提示）</span>
                       </div>
-                      <span className="text-[10px] px-2.5 py-0.5 rounded-full border border-[#B0B0B0] text-[#888]">点击字段可编辑</span>
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-full border border-[#B0B0B0] text-[#888]">点击「编辑」进入编辑态</span>
                     </div>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className="text-[10px] px-2 py-0.5 rounded border border-[#B0B0B0] text-[#777]">结构</span>

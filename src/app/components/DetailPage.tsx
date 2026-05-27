@@ -517,6 +517,7 @@ export function DetailPage() {
     }
   }, [closeTarget]);
   const [edits, setEdits] = useState<Record<string, string | number>>({});
+  const [isEditMode, setIsEditMode] = useState(false);
   const isNonAden = position.counterparty !== '亚丁';
 
   // 自定义标签
@@ -751,37 +752,20 @@ export function DetailPage() {
   }
 
   function EditableValue({ field, value, className = '', suffix = '', style, type = 'text' }: { field: string; value: string | number; className?: string; suffix?: string; style?: React.CSSProperties; type?: string }) {
-    const [editing, setEditing] = useState(false);
-    const [val, setVal] = useState(String(edits[field] ?? value));
-    if (!isNonAden) return <span className={className} style={style}>{value}{suffix}</span>;
-    if (editing) {
-      return (
-        <span className="flex items-center gap-1">
-          <input
-            type={type}
-            value={val}
-            onChange={e => setVal(e.target.value)}
-            onBlur={() => {
-              setEdits(prev => ({ ...prev, [field]: isNaN(Number(val)) ? val : Number(val) }));
-              setEditing(false);
-            }}
-            onKeyDown={e => { if (e.key === 'Enter') { setEdits(prev => ({ ...prev, [field]: isNaN(Number(val)) ? val : Number(val) })); setEditing(false); } }}
-            onClick={type === 'date' ? (e => { e.preventDefault(); (e.target as HTMLInputElement).showPicker?.(); }) : undefined}
-            className={`text-xs border border-[#1677FF] rounded px-1 py-0 focus:outline-none ${type === 'date' ? 'cursor-pointer' : ''}`}
-            style={{ width: 80, ...style }}
-            autoFocus
-          />
-          {suffix && <span className="text-xs text-[#6B7280] whitespace-nowrap">{suffix}</span>}
-        </span>
-      );
-    }
+    const currentVal = edits[field] !== undefined ? String(edits[field]) : String(value);
+    if (!isNonAden || !isEditMode) return <span className={className} style={style}>{currentVal}{suffix}</span>;
     return (
-      <span
-        className={`${className} cursor-pointer hover:bg-[#EFF6FF] hover:text-[#1677FF] rounded px-1 -mx-1 transition-colors border-b border-dashed border-transparent hover:border-[#1677FF]`}
-        style={style}
-        onClick={() => { setVal(String(edits[field] ?? value)); setEditing(true); }}
-      >
-        {edits[field] !== undefined ? String(edits[field]) : value}{suffix}
+      <span className="flex items-center gap-1">
+        <input
+          type={type}
+          value={currentVal}
+          onChange={e => setEdits(prev => ({ ...prev, [field]: isNaN(Number(e.target.value)) && type !== 'text' ? prev[field] : type === 'number' || !isNaN(Number(e.target.value)) ? Number(e.target.value) : e.target.value }))}
+          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+          onClick={type === 'date' ? (e => { e.preventDefault(); (e.target as HTMLInputElement).showPicker?.(); }) : undefined}
+          className={`text-xs border border-[#1677FF] rounded px-1 py-0 focus:outline-none ${type === 'date' ? 'cursor-pointer' : ''}`}
+          style={{ width: type === 'text' ? 140 : 80, ...style }}
+        />
+        {suffix && <span className="text-xs text-[#6B7280] whitespace-nowrap">{suffix}</span>}
       </span>
     );
   }
@@ -829,15 +813,27 @@ export function DetailPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl font-semibold text-[#0d1117]">{position.underlying}</h1>
-                  <span className="text-xs text-[#9ca3af]">{position.code}</span>
+                  {isEditMode && isNonAden ? (
+                    <input value={String(edits['underlying'] ?? position.underlying)} onChange={e => setEdits(prev => ({ ...prev, underlying: e.target.value }))} className="text-xl font-semibold text-[#0d1117] border border-[#1677FF] rounded px-2 py-0 focus:outline-none w-[200px]" />
+                  ) : (
+                    <h1 className="text-xl font-semibold text-[#0d1117]">{String(edits['underlying'] ?? position.underlying)}</h1>
+                  )}
+                  {isEditMode && isNonAden ? (
+                    <input value={String(edits['code'] ?? position.code)} onChange={e => setEdits(prev => ({ ...prev, code: e.target.value }))} className="text-xs text-[#9ca3af] border border-[#1677FF] rounded px-1 py-0 focus:outline-none w-[120px]" />
+                  ) : (
+                    <span className="text-xs text-[#9ca3af]">{String(edits['code'] ?? position.code)}</span>
+                  )}
                   <span className="px-2 py-0.5 rounded text-[10px] font-medium border"
                     style={{ background: closeStatusColor.bg, color: closeStatusColor.text, borderColor: closeStatusColor.border }}>
                     {closeStatusLabel}
                   </span>
                 </div>
                 <div className="flex items-center gap-4 mt-2 text-xs text-[#9ca3af]">
-                  <span>交易对手 <strong className="text-[#0d1117]">{position.counterparty}</strong></span>
+                  <span>交易对手 {isEditMode && isNonAden ? (
+                    <input value={String(edits['counterparty'] ?? position.counterparty)} onChange={e => setEdits(prev => ({ ...prev, counterparty: e.target.value }))} className="font-semibold text-[#0d1117] border border-[#1677FF] rounded px-1 py-0 focus:outline-none w-[120px]" />
+                  ) : (
+                    <strong className="text-[#0d1117]">{String(edits['counterparty'] ?? position.counterparty)}</strong>
+                  )}</span>
                   <span className="text-[#e8ecf0]">|</span>
                   <span>持有期 <strong className="text-[#0d1117]">{position.startDate} 至 {position.expiryDate}</strong>（{holdingDays} 天）</span>
                   <span className="text-[#e8ecf0]">|</span>
@@ -1000,10 +996,18 @@ export function DetailPage() {
             <div className="flex items-start gap-4">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl font-semibold text-[#0d1117]">{position.underlying}</h1>
-                  <span className="text-xs text-[#9ca3af]">{position.code}</span>
-                  <span className="text-[#1677FF] hover:text-[#0E5FCC] cursor-pointer text-xs ml-1">刷新</span>
-                  <span className="text-[10px] text-[#9ca3af]">数据更新 2026-05-14 15:00</span>
+                  {isEditMode && isNonAden ? (
+                    <input value={String(edits['underlying_2'] ?? position.underlying)} onChange={e => setEdits(prev => ({ ...prev, underlying: e.target.value, underlying_2: e.target.value }))} className="text-xl font-semibold text-[#0d1117] border border-[#1677FF] rounded px-2 py-0 focus:outline-none w-[200px]" />
+                  ) : (
+                    <h1 className="text-xl font-semibold text-[#0d1117]">{String(edits['underlying'] ?? position.underlying)}</h1>
+                  )}
+                  {isEditMode && isNonAden ? (
+                    <input value={String(edits['code_2'] ?? position.code)} onChange={e => setEdits(prev => ({ ...prev, code: e.target.value, code_2: e.target.value }))} className="text-xs text-[#9ca3af] border border-[#1677FF] rounded px-1 py-0 focus:outline-none w-[120px]" />
+                  ) : (
+                    <span className="text-xs text-[#9ca3af]">{String(edits['code'] ?? position.code)}</span>
+                  )}
+                  {!isEditMode && <span className="text-[#1677FF] hover:text-[#0E5FCC] cursor-pointer text-xs ml-1">刷新</span>}
+                  {!isEditMode && <span className="text-[10px] text-[#9ca3af]">数据更新 2026-05-14 15:00</span>}
                 </div>
                 <div className="flex items-center gap-6 mt-2">
                   <div className="flex items-center gap-2">
@@ -1016,7 +1020,11 @@ export function DetailPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-[#9ca3af]">
-                    <span>交易对手 <strong className="text-[#0d1117]">{position.counterparty}</strong></span>
+                    <span>交易对手 {isEditMode && isNonAden ? (
+                      <input value={String(edits['counterparty_2'] ?? position.counterparty)} onChange={e => setEdits(prev => ({ ...prev, counterparty: e.target.value, counterparty_2: e.target.value }))} className="font-semibold text-[#0d1117] border border-[#1677FF] rounded px-1 py-0 focus:outline-none w-[120px]" />
+                    ) : (
+                      <strong className="text-[#0d1117]">{String(edits['counterparty'] ?? position.counterparty)}</strong>
+                    )}</span>
                   </div>
                 </div>
               </div>
@@ -1094,6 +1102,18 @@ export function DetailPage() {
                 <h2 className="text-sm font-semibold text-[#0d1117]">持仓明细</h2>
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#eff6ff] text-[#1d4ed8]">1 笔</span>
               </div>
+              {isNonAden && (
+                <button
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className={`text-[10px] px-3 py-1 rounded-md font-medium transition-colors ${
+                    isEditMode
+                      ? 'bg-[#059669] text-white hover:bg-[#047857]'
+                      : 'border border-[#D1D5DB] text-[#6B7280] hover:border-[#1677FF] hover:text-[#1677FF]'
+                  }`}
+                >
+                  {isEditMode ? '完成' : '编辑'}
+                </button>
+              )}
             </div>
 
             {/* 卡片式持仓详情 */}
