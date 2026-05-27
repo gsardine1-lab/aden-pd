@@ -875,7 +875,7 @@ export function WireframeHistoricalPage() {
               <table className="w-full min-w-[1000px] text-xs">
                 <thead>
                   <tr className={`bg-[#ECECEC] border-b ${DIVIDER}`}>
-                    {['标的信息', '交易对手', '结构', '状态', '开仓日 / 到期日', '名本', '平仓收益', '累计净收益', '备注', '标签', '操作'].map(h => (
+                    {['标的信息', '交易对手', '结构', '状态', '开仓日 / 到期日', '本次平仓名本', '平仓收益', '累计净收益', '备注', '标签', '操作'].map(h => (
                       <th key={h} className="text-left px-3 py-2.5 text-[10px] font-semibold text-[#666] whitespace-nowrap">{h} {h !== '操作' && '▲'}</th>
                     ))}
                   </tr>
