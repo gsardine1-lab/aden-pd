@@ -533,6 +533,7 @@ export function DetailPage() {
   }, [closeTarget]);
   const [edits, setEdits] = useState<Record<string, string | number>>({});
   const isNonAden = position.counterparty !== '亚丁';
+  const nonAdenCloseRecords = isNonAden ? (getCloseRecords()[position.id] || []) : [];
   const [isEditMode, setIsEditMode] = useState(false);
   const stockKnown = useMemo(() => {
     const u = String(edits['underlying'] ?? position.underlying);
@@ -1140,6 +1141,48 @@ export function DetailPage() {
 
         {/* ========== 两大模块 ========== */}
         <div className="flex flex-col gap-5 mt-5">
+
+          {/* === 非亚丁：平仓记录（部分平仓时展示） === */}
+          {isNonAden && nonAdenCloseRecords.length > 0 && (
+            <div id="close-records" data-anchor>
+            <div className="bg-white rounded-xl border border-[#e8ecf0] overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8ecf0]">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-5 rounded-full bg-gradient-to-b from-[#6d28d9] to-[#a78bfa]" />
+                  <h2 className="text-sm font-semibold text-[#0d1117]">平仓记录</h2>
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#f5f3ff] text-[#6d28d9]">{nonAdenCloseRecords.length} 笔</span>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[#F9FAFB] border-b border-[#F3F4F6]">
+                      <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-[#6B7280]">#</th>
+                      <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-[#6B7280]">平仓日期</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-semibold text-[#6B7280]">平仓价格</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-semibold text-[#6B7280]">本次平仓名本（万）</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-semibold text-[#6B7280]">累计名本（万）</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nonAdenCloseRecords.map((rec: CloseRecord, idx: number) => {
+                      const cumulativeNotional = nonAdenCloseRecords.slice(0, idx + 1).reduce((s: number, r: CloseRecord) => s + (r.notionalCNY || 0), 0);
+                      return (
+                        <tr key={rec.id} className="border-b border-[#F3F4F6] hover:bg-[#F9FAFB]">
+                          <td className="px-4 py-2.5 text-[#9CA3AF]">{idx + 1}</td>
+                          <td className="px-4 py-2.5 text-[#374151]">{rec.date}</td>
+                          <td className="px-4 py-2.5 text-right text-[#374151] font-medium">{rec.price.toLocaleString()}</td>
+                          <td className="px-4 py-2.5 text-right text-[#374151]">{(rec.notionalCNY || 0).toFixed(0)}</td>
+                          <td className="px-4 py-2.5 text-right text-[#374151]">{cumulativeNotional.toFixed(0)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            </div>
+          )}
 
           {/* === 模块一：关键事件记录 === */}
           <div id="key-events-timeline" data-anchor>

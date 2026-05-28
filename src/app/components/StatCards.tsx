@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, BarChart2, CheckCircle, Clock, TrendingUp, X } from 'lucide-react';
+import { AlertTriangle, BarChart2, CheckCircle, Clock, Info, TrendingUp, X } from 'lucide-react';
 import { Currency, convertCurrency, formatAmount, mockPositions, getDaysUntilExpiry, Position } from './mockData';
 
 interface StatCardsProps {
@@ -82,6 +82,14 @@ export function StatCards({ wireframe = false, filteredPositions, isFiltered = f
     );
   }
 
+  const hintText = (
+  <>
+    持仓总市值及预估净收益基于当前市场行情与汇率估算。
+    <br />
+    部分标的若暂无法获取行情数据，则暂不纳入统计，相关持仓可正常持有与查看。
+  </>
+);
+
   return (
     <div>
       {/* 筛选状态提示 */}
@@ -105,7 +113,15 @@ export function StatCards({ wireframe = false, filteredPositions, isFiltered = f
         {/* 持仓总市值 — 含币种切换 */}
         <div className="bg-white rounded-xl border border-[#E8ECF0] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-            <span className={`text-xs font-medium text-[#6B7280]`}>持仓总市值</span>
+            <span className="text-xs font-medium text-[#6B7280] inline-flex items-center gap-1">
+              持仓总市值
+              <span className="relative group cursor-help">
+                <Info size={12} className="text-[#9CA3AF] hover:text-[#6B7280]" />
+                <span className="absolute top-full left-0 mt-1.5 px-3 py-2 bg-[#1F2937] text-white text-[11px] rounded-lg shadow-lg w-64 leading-relaxed hidden group-hover:block whitespace-normal z-50">
+                  {hintText}
+                </span>
+              </span>
+            </span>
             <div className="flex items-center gap-1.5">
               <div className="flex items-center bg-[#F3F4F6] rounded-lg p-0.5">
                 {(['CNY', 'USD', 'HKD'] as Currency[]).map((c) => (
@@ -144,7 +160,15 @@ export function StatCards({ wireframe = false, filteredPositions, isFiltered = f
         {/* 持仓预估净收益 — 支持币种切换 */}
         <div className="bg-white rounded-xl border border-[#E8ECF0] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-[#6B7280] font-medium whitespace-nowrap">持仓预估净收益（昨日）</span>
+            <span className="text-xs text-[#6B7280] font-medium whitespace-nowrap inline-flex items-center gap-1">
+              持仓预估净收益（昨日）
+              <span className="relative group cursor-help">
+                <Info size={12} className="text-[#9CA3AF] hover:text-[#6B7280]" />
+                <span className="absolute top-full left-0 mt-1.5 px-3 py-2 bg-[#1F2937] text-white text-[11px] rounded-lg shadow-lg w-64 leading-relaxed hidden group-hover:block whitespace-normal z-50">
+                  {hintText}
+                </span>
+              </span>
+            </span>
             <div className="flex items-center gap-1.5">
               <div className="flex items-center bg-[#F3F4F6] rounded-lg p-0.5">
                 {(['CNY', 'USD', 'HKD'] as Currency[]).map((c) => (
